@@ -1,14 +1,14 @@
-from distutils.core import setup
+from setuptools import find_packages, setup
 
 
 setup(name='scikit-keras',
-      packages=['skkeras'],
-      version='0.1.0',
+      packages=find_packages(),
+      version='0.1.1',
       description='Scikit-learn-compatible Keras models',
       author='David Diaz Vico',
       author_email='david.diaz.vico@outlook.com',
       url='https://github.com/daviddiazvico/scikit-keras',
-      download_url='https://github.com/daviddiazvico/scikit-keras/archive/v0.1.0.tar.gz',
+      download_url='https://github.com/daviddiazvico/scikit-keras/archive/v0.1.1.tar.gz',
       keywords=['scikit-learn', 'keras'],
       classifiers=['Intended Audience :: Science/Research',
                    'Intended Audience :: Developers',

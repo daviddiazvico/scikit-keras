@@ -666,9 +666,7 @@ class BaseFeedForward(BaseEstimator):
             x = layer(x)
         return x
 
-    def _model(self, X, y):
-        inputs = Input(shape=X.shape[1:])
-        z = inputs
+    def _body(self, z):
         if (self.convolution_filters is not None) or (self.convolution_kernel_size is not None):
             if len(self.convolution_filters) == len(self.convolution_kernel_size):
                 self.convolution_strides = [[1] * len(k) for k in self.convolution_kernel_size] if self.convolution_strides is None else self.convolution_strides
@@ -692,6 +690,11 @@ class BaseFeedForward(BaseEstimator):
             self.dropout_noise_shape = [None] * len(self.dense_units) if self.dropout_noise_shape is None else self.dropout_noise_shape
             for (du, dns) in zip(self.dense_units, self.dropout_noise_shape):
                 z = self._connect(z, du, dropout_noise_shape=dns)
+        return z
+
+    def _model(self, X, y):
+        z = inputs = Input(shape=X.shape[1:])
+        z = self._body(z)
         layer = Dense(int(np.prod(y.shape[1:])),
                       activation=self.output_activation,
                       use_bias=self.output_use_bias,
@@ -708,6 +711,26 @@ class BaseFeedForward(BaseEstimator):
         layer = TimeDistributed(layer) if self.recurrent_return_sequences else layer
         output = layer(z)
         return Model(inputs, output)
+
+    def _solver(self, solver):
+        solvers = {'sgd': SGD(lr=self.lr, momentum=self.momentum,
+                              decay=self.decay, nesterov=self.nesterov),
+                   'rmsprop': RMSprop(lr=self.lr, rho=self.rho,
+                                      epsilon=self.epsilon, decay=self.decay),
+                   'adagrad': Adagrad(lr=self.lr, epsilon=self.epsilon,
+                                      decay=self.decay),
+                   'adadelta': Adadelta(lr=self.lr, rho=self.rho,
+                                        epsilon=self.epsilon, decay=self.decay),
+                   'adam': Adam(lr=self.lr, beta_1=self.beta_1,
+                                beta_2=self.beta_2, epsilon=self.epsilon,
+                                decay=self.decay),
+                   'adamax': Adamax(lr=self.lr, beta_1=self.beta_1,
+                                    beta_2=self.beta_2, epsilon=self.epsilon,
+                                    decay=self.decay),
+                   'nadam': Nadam(lr=self.lr, beta_1=self.beta_1,
+                                  beta_2=self.beta_2, epsilon=self.epsilon,
+                                  schedule_decay=self.schedule_decay)}
+        return solvers[solver]
 
     def fit(self, X, y, solver=None, lr=None, momentum=None, nesterov=None,
             decay=None, rho=None, epsilon=None, beta_1=None, beta_2=None,
@@ -817,39 +840,23 @@ class BaseFeedForward(BaseEstimator):
                          multi_output=True)
         y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
         self.model_ = self._model(X, y)
-        solver = {'sgd': SGD(lr=self.lr, momentum=self.momentum,
-                             decay=self.decay, nesterov=self.nesterov),
-                  'rmsprop': RMSprop(lr=self.lr, rho=self.rho,
-                                     epsilon=self.epsilon, decay=self.decay),
-                  'adagrad': Adagrad(lr=self.lr, epsilon=self.epsilon,
-                                     decay=self.decay),
-                  'adadelta': Adadelta(lr=self.lr, rho=self.rho,
-                                       epsilon=self.epsilon, decay=self.decay),
-                  'adam': Adam(lr=self.lr, beta_1=self.beta_1,
-                               beta_2=self.beta_2, epsilon=self.epsilon,
-                               decay=self.decay),
-                  'adamax': Adamax(lr=self.lr, beta_1=self.beta_1,
-                                   beta_2=self.beta_2, epsilon=self.epsilon,
-                                   decay=self.decay),
-                  'nadam': Nadam(lr=self.lr, beta_1=self.beta_1,
-                                 beta_2=self.beta_2, epsilon=self.epsilon,
-                                 schedule_decay=self.schedule_decay)}
-        self.model_.compile(solver[self.solver], self.loss,
+        self.model_.compile(self._solver(self.solver), self.loss,
                             metrics=self.metrics,
                             loss_weights=self.loss_weights,
                             sample_weight_mode=self.sample_weight_mode)
         callbacks = [EarlyStopping(monitor='val_loss' if (self.validation_split > 0.0 or self.validation_data is not None) else 'loss',
                                    min_delta=self.tol, patience=2)] if self.early_stopping and (self.tol > 0.0) else []
         self.history_ = self.model_.fit(X, y,
-                                       batch_size=min(200, len(X)) if self.batch_size == 'auto' else self.batch_size,
-                                       epochs=self.epochs, verbose=self.verbose,
-                                       callbacks=callbacks,
-                                       validation_split=self.validation_split,
-                                       validation_data=self.validation_data,
-                                       shuffle=self.shuffle,
-                                       class_weight=self.class_weight,
-                                       sample_weight=np.asarray(self.sample_weight) if type(self.sample_weight) in (list, tuple) else self.sample_weight,
-                                       initial_epoch=self.initial_epoch)
+                                        batch_size=min(200, len(X)) if self.batch_size == 'auto' else self.batch_size,
+                                        epochs=self.epochs,
+                                        verbose=self.verbose,
+                                        callbacks=callbacks,
+                                        validation_split=self.validation_split,
+                                        validation_data=self.validation_data,
+                                        shuffle=self.shuffle,
+                                        class_weight=self.class_weight,
+                                        sample_weight=np.asarray(self.sample_weight) if type(self.sample_weight) in (list, tuple) else self.sample_weight,
+                                        initial_epoch=self.initial_epoch)
         return self
 
     def predict(self, X, batch_size=32, verbose=0):
@@ -917,30 +924,25 @@ class FFClassifier(BaseFeedForward, ClassifierMixin, TransformerMixin):
 
     loss = 'categorical_crossentropy'
 
-    def _fit_classifier(fit):
-        def wrapper(self, X, y, sample_weight=None, **kwargs):
-            self.classes_ = np.unique(y)
-            self.n_classes_ = self.classes_.shape[0]
-            return fit(self, X, to_categorical(y), sample_weight=sample_weight,
-                       **kwargs)
-        return wrapper
-    fit = _fit_classifier(BaseFeedForward.fit)
+    def fit(self, X, y, sample_weight=None, **kwargs):
+        self.classes_ = np.unique(y)
+        self.n_classes_ = self.classes_.shape[0]
+        return BaseFeedForward.fit(self, X, to_categorical(y),
+                                   sample_weight=sample_weight, **kwargs)
+    fit.__doc__ = BaseFeedForward.fit.__doc__
 
     predict_proba = BaseFeedForward.predict
 
-    def _predict_classifier(predict):
-        def wrapper(self, X, **kwargs):
-            return predict(self, X, **kwargs).argmax(axis=1)
-        return wrapper
-    predict = _predict_classifier(BaseFeedForward.predict)
+    def predict(self, X, **kwargs):
+        return BaseFeedForward.predict(self, X, **kwargs).argmax(axis=1)
+    predict.__doc__ = BaseFeedForward.predict.__doc__
 
     transform = predict_proba
 
-    def _score_classifier(score):
-        def wrapper(self, X, y, sample_weight=None, metric=accuracy_score):
-            return score(self, X, y, sample_weight=sample_weight, metric=metric)
-        return wrapper
-    score = _score_classifier(BaseFeedForward.score)
+    def score(self, X, y, sample_weight=None, metric=accuracy_score):
+        return BaseFeedForward.score(self, X, y, sample_weight=sample_weight,
+                                     metric=metric)
+    score.__doc__ = BaseFeedForward.score.__doc__
 
 
 ###############################################################################

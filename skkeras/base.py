@@ -332,6 +332,9 @@ class BaseFeedForward(BaseEstimator):
                     validation score is not improving.
     tol: float, default 1e-4
          Tolerance for the optimization.
+    patience: integer, default 2
+              Number of epochs with no improvement after which training will
+              be stopped.
     validation_split: float in [0, 1], default=0.1
                       Fraction of the training data to be used as validation
                       data.
@@ -429,8 +432,9 @@ class BaseFeedForward(BaseEstimator):
                  schedule_decay=0.004, loss=None, metrics=None,
                  loss_weights=None, sample_weight_mode=None, batch_size='auto',
                  epochs=200, verbose=2, early_stopping=True, tol=0.0001,
-                 validation_split=0.1, validation_data=None, shuffle=True,
-                 class_weight=None, sample_weight=None, initial_epoch=0):
+                 patience=2, validation_split=0.1, validation_data=None,
+                 shuffle=True, class_weight=None, sample_weight=None,
+                 initial_epoch=0):
         self.convolution_filters = convolution_filters
         self.convolution_kernel_size = convolution_kernel_size
         self.convolution_strides = convolution_strides
@@ -542,6 +546,7 @@ class BaseFeedForward(BaseEstimator):
         self.verbose = verbose
         self.early_stopping = early_stopping
         self.tol = tol
+        self.patience = patience
         self.validation_split = validation_split
         self.validation_data = validation_data
         self.shuffle = shuffle
@@ -736,7 +741,7 @@ class BaseFeedForward(BaseEstimator):
             decay=None, rho=None, epsilon=None, beta_1=None, beta_2=None,
             schedule_decay=None, loss=None, metrics=None, loss_weights=None,
             sample_weight_mode=None, batch_size=None, epochs=None, verbose=None,
-            early_stopping=None, tol=None, validation_split=None,
+            early_stopping=None, tol=None, patience=None, validation_split=None,
             validation_data=None, shuffle=None, class_weight=None,
             sample_weight=None, initial_epoch=None):
         """Fit to data.
@@ -787,6 +792,9 @@ class BaseFeedForward(BaseEstimator):
                         when validation score is not improving.
         tol: float, default 1e-4
              Tolerance for the optimization.
+        patience: integer, default 2
+                  Number of epochs with no improvement after which training will
+                  be stopped.
         validation_split: float in [0, 1], default=0.1
                           Fraction of the training data to be used as validation
                           data.
@@ -830,6 +838,7 @@ class BaseFeedForward(BaseEstimator):
         self.verbose = verbose if verbose is not None else self.verbose
         self.early_stopping = early_stopping if early_stopping is not None else self.early_stopping
         self.tol = tol if tol is not None else self.tol
+        self.patience = patience if patience is not None else self.patience
         self.validation_split = validation_split if validation_split is not None else self.validation_split
         self.validation_data = validation_data if validation_data is not None else self.validation_data
         self.shuffle = shuffle if shuffle is not None else self.shuffle
@@ -845,7 +854,7 @@ class BaseFeedForward(BaseEstimator):
                             loss_weights=self.loss_weights,
                             sample_weight_mode=self.sample_weight_mode)
         callbacks = [EarlyStopping(monitor='val_loss' if (self.validation_split > 0.0 or self.validation_data is not None) else 'loss',
-                                   min_delta=self.tol, patience=2)] if self.early_stopping and (self.tol > 0.0) else []
+                                   min_delta=self.tol, patience=self.patience)] if self.early_stopping and (self.tol > 0.0) else []
         self.history_ = self.model_.fit(X, y,
                                         batch_size=min(200, len(X)) if self.batch_size == 'auto' else self.batch_size,
                                         epochs=self.epochs,

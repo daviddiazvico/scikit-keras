@@ -11,6 +11,7 @@ import pickle
 from scipy.stats import uniform
 from sklearn.datasets import load_iris, load_boston, load_diabetes, load_digits
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier
+from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -95,13 +96,14 @@ def test_serialization():
     data = load_iris()
     predictor = FFClassifier()
     predictor.fit(data.data, data.target, epochs=1)
-    serialized_predictor = pickle.dumps(predictor)
-    deserialized_predictor = pickle.loads(serialized_predictor)
-    assert isinstance(deserialized_predictor, FFClassifier)
-    preds = deserialized_predictor.predict(data.data)
-    assert isinstance(preds, np.ndarray)
-    score = deserialized_predictor.score(data.data, data.target)
-    assert isinstance(score, float)
+    for serializer in [pickle, joblib]:
+        serialized_predictor = serializer.dumps(predictor)
+        deserialized_predictor = serializer.loads(serialized_predictor)
+        assert isinstance(deserialized_predictor, FFClassifier)
+        preds = deserialized_predictor.predict(data.data)
+        assert isinstance(preds, np.ndarray)
+        score = deserialized_predictor.score(data.data, data.target)
+        assert isinstance(score, float)
 
 
 ###############################################################################

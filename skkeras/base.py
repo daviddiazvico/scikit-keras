@@ -49,6 +49,15 @@ Model.__setstate__ = __setstate__
 
 
 ###############################################################################
+#  Time-series formatting
+###############################################################################
+
+
+def time_series_tensor(X, window):
+    return np.array([X[i:i + window] for i in range(X.shape[0] - window + 1)])
+
+
+###############################################################################
 #  Base feed-forward class
 ###############################################################################
 
@@ -109,6 +118,8 @@ class BaseFeedForward(BaseEstimator):
                      Strides values.
     pooling_padding: {"valid", "same"}, default='valid'
     recurrent_type: {"lstm", "gru"}, default='lstm'
+    recurrent_window: integer, default=3
+                      Time window length.
     recurrent_units: integer, default=None
                      Dimensionality of the output space.
     recurrent_activation: string/function, default='tanh'
@@ -372,7 +383,8 @@ class BaseFeedForward(BaseEstimator):
                  convolution_bias_constraint=None, pooling_type='max',
                  pooling_pool_size=None, pooling_strides=None,
                  pooling_padding='valid', recurrent_type='lstm',
-                 recurrent_units=None, recurrent_activation='tanh',
+                 recurrent_window=3, recurrent_units=None,
+                 recurrent_activation='tanh',
                  recurrent_recurrent_activation='hard_sigmoid',
                  recurrent_use_bias=True,
                  recurrent_kernel_initializer='glorot_uniform',
@@ -457,6 +469,7 @@ class BaseFeedForward(BaseEstimator):
         self.pooling_strides = pooling_strides
         self.pooling_padding = pooling_padding
         self.recurrent_type = recurrent_type
+        self.recurrent_window = recurrent_window
         self.recurrent_units = recurrent_units
         self.recurrent_activation = recurrent_activation
         self.recurrent_recurrent_activation = recurrent_recurrent_activation
@@ -845,9 +858,13 @@ class BaseFeedForward(BaseEstimator):
         self.class_weight = class_weight if class_weight is not None else self.class_weight
         self.sample_weight = sample_weight if sample_weight is not None else self.sample_weight
         self.initial_epoch = initial_epoch if initial_epoch is not None else self.initial_epoch
+        y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
+        if self.recurrent_units is not None:
+            X = time_series_tensor(X, self.recurrent_window)
+            if self.recurrent_return_sequences:
+                y = time_series_tensor(y, self.recurrent_window)
         X, y = check_X_y(X, y, ensure_2d=False, allow_nd=True,
                          multi_output=True)
-        y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
         self.model_ = self._model(X, y)
         self.model_.compile(self._solver(self.solver), self.loss,
                             metrics=self.metrics,
@@ -887,6 +904,8 @@ class BaseFeedForward(BaseEstimator):
 
         """
         check_is_fitted(self, ['model_', 'history_'])
+        if self.recurrent_units is not None:
+            X = time_series_tensor(X, self.recurrent_window)
         X = check_array(X, ensure_2d=False, allow_nd=True)
         preds = self.model_.predict(X, batch_size=batch_size, verbose=verbose)
         return preds.reshape((len(preds))) if (len(preds.shape) == 2 and preds.shape[1] == 1) else preds
@@ -914,9 +933,13 @@ class BaseFeedForward(BaseEstimator):
 
         """
         check_is_fitted(self, ['model_', 'history_'])
+        y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
+        if self.recurrent_units is not None:
+            X = time_series_tensor(X, self.recurrent_window)
+            if self.recurrent_return_sequences:
+                y = time_series_tensor(y, self.recurrent_window)
         X, y = check_X_y(X, y, ensure_2d=False, allow_nd=True,
                          multi_output=True)
-        y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
         return metric(y, self.predict(X), sample_weight=sample_weight)
 
 

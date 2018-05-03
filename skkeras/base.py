@@ -861,8 +861,7 @@ class BaseFeedForward(BaseEstimator):
         y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
         if self.recurrent_units is not None:
             X = time_series_tensor(X, self.recurrent_window)
-            if self.recurrent_return_sequences:
-                y = time_series_tensor(y, self.recurrent_window)
+            y = time_series_tensor(y, self.recurrent_window) if self.recurrent_return_sequences else y[self.recurrent_window - 1:]
         X, y = check_X_y(X, y, ensure_2d=False, allow_nd=True,
                          multi_output=True)
         self.model_ = self._model(X, y)
@@ -936,8 +935,7 @@ class BaseFeedForward(BaseEstimator):
         y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
         if self.recurrent_units is not None:
             X = time_series_tensor(X, self.recurrent_window)
-            if self.recurrent_return_sequences:
-                y = time_series_tensor(y, self.recurrent_window)
+            y = time_series_tensor(y, self.recurrent_window) if self.recurrent_return_sequences else y[self.recurrent_window - 1:]
         X, y = check_X_y(X, y, ensure_2d=False, allow_nd=True,
                          multi_output=True)
         return metric(y, self.predict(X), sample_weight=sample_weight)

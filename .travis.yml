@@ -24,7 +24,7 @@ script:
   - coveralls
   - mkdir docs
   - export PYTHONPATH=`pwd`
-  - sphinx-quickstart -q -p scikit-keras -a "David Diaz Vico" -v 0.1 -r 0.1.5 -l en --ext-autodoc --ext-viewcode --ext-githubpages --extensions sphinxcontrib.napoleon --no-makefile --no-batchfile docs
+  - sphinx-quickstart -q -p scikit-keras -a "David Diaz Vico" -v 0.1 -r 0.1.6 -l en --ext-autodoc --ext-viewcode --ext-githubpages --extensions sphinxcontrib.napoleon --no-makefile --no-batchfile docs
   - sphinx-apidoc -o docs/_static/ skkeras -F -a -l
   - travis-sphinx -v build -s docs -n
 after_success:

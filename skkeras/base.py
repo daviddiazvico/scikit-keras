@@ -5,6 +5,8 @@ Scikit-learn-compatible Keras models.
 @license: MIT
 """
 
+from functools import partialmethod
+from keras import backend as K
 from keras.callbacks import EarlyStopping
 from keras.layers import (AveragePooling1D, AveragePooling2D, AveragePooling3D,
                           BatchNormalization, Dense, Dropout, Flatten, Input,
@@ -62,7 +64,7 @@ def time_series_tensor(X, window):
 ###############################################################################
 
 
-class BaseFeedForward(BaseEstimator):
+class BaseFeedForward(BaseEstimator, TransformerMixin):
 
     """Feed-forward regressor/classifier.
 
@@ -118,7 +120,7 @@ class BaseFeedForward(BaseEstimator):
                      Strides values.
     pooling_padding: {"valid", "same"}, default='valid'
     recurrent_type: {"lstm", "gru"}, default='lstm'
-    recurrent_window: integer, default=3
+    recurrent_window: integer, default=None
                       Time window length.
     recurrent_units: integer, default=None
                      Dimensionality of the output space.
@@ -383,7 +385,7 @@ class BaseFeedForward(BaseEstimator):
                  convolution_bias_constraint=None, pooling_type='max',
                  pooling_pool_size=None, pooling_strides=None,
                  pooling_padding='valid', recurrent_type='lstm',
-                 recurrent_window=3, recurrent_units=None,
+                 recurrent_window=None, recurrent_units=None,
                  recurrent_activation='tanh',
                  recurrent_recurrent_activation='hard_sigmoid',
                  recurrent_use_bias=True,
@@ -428,7 +430,7 @@ class BaseFeedForward(BaseEstimator):
                  dense_activity_regularizer_l1=None,
                  dense_activity_regularizer_l2=None,
                  dense_kernel_constraint=None, dense_bias_constraint=None,
-                 output_activation=None, output_use_bias=True,
+                 output_activation='linear', output_use_bias=True,
                  output_kernel_initializer='glorot_uniform',
                  output_bias_initializer='zeros',
                  output_kernel_regularizer_l1=None,
@@ -441,131 +443,15 @@ class BaseFeedForward(BaseEstimator):
                  dropout_rate=0.0, dropout_noise_shape=None, dropout_seed=None,
                  solver='adam', lr=0.001, momentum=0.0, nesterov=False,
                  decay=0.0, rho=0.9, epsilon=1e-08, beta_1=0.9, beta_2=0.999,
-                 schedule_decay=0.004, loss=None, metrics=None,
+                 schedule_decay=0.004, loss='mse', metrics=None,
                  loss_weights=None, sample_weight_mode=None, batch_size='auto',
                  epochs=200, verbose=2, early_stopping=True, tol=0.0001,
                  patience=2, validation_split=0.1, validation_data=None,
                  shuffle=True, class_weight=None, sample_weight=None,
                  initial_epoch=0):
-        self.convolution_filters = convolution_filters
-        self.convolution_kernel_size = convolution_kernel_size
-        self.convolution_strides = convolution_strides
-        self.convolution_padding = convolution_padding
-        self.convolution_dilation_rate = convolution_dilation_rate
-        self.convolution_activation = convolution_activation
-        self.convolution_use_bias = convolution_use_bias
-        self.convolution_kernel_initializer = convolution_kernel_initializer
-        self.convolution_bias_initializer = convolution_bias_initializer
-        self.convolution_kernel_regularizer_l1 = convolution_kernel_regularizer_l1
-        self.convolution_kernel_regularizer_l2 = convolution_kernel_regularizer_l2
-        self.convolution_bias_regularizer_l1 = convolution_bias_regularizer_l1
-        self.convolution_bias_regularizer_l2 = convolution_bias_regularizer_l2
-        self.convolution_activity_regularizer_l1 = convolution_activity_regularizer_l1
-        self.convolution_activity_regularizer_l2 = convolution_activity_regularizer_l2
-        self.convolution_kernel_constraint = convolution_kernel_constraint
-        self.convolution_bias_constraint = convolution_bias_constraint
-        self.pooling_type = pooling_type
-        self.pooling_pool_size = pooling_pool_size
-        self.pooling_strides = pooling_strides
-        self.pooling_padding = pooling_padding
-        self.recurrent_type = recurrent_type
-        self.recurrent_window = recurrent_window
-        self.recurrent_units = recurrent_units
-        self.recurrent_activation = recurrent_activation
-        self.recurrent_recurrent_activation = recurrent_recurrent_activation
-        self.recurrent_use_bias = recurrent_use_bias
-        self.recurrent_kernel_initializer = recurrent_kernel_initializer
-        self.recurrent_recurrent_initializer = recurrent_recurrent_initializer
-        self.recurrent_bias_initializer = recurrent_bias_initializer
-        self.recurrent_unit_forget_bias = recurrent_unit_forget_bias
-        self.recurrent_kernel_regularizer_l1 = recurrent_kernel_regularizer_l1
-        self.recurrent_kernel_regularizer_l2 = recurrent_kernel_regularizer_l2
-        self.recurrent_recurrent_regularizer_l1 = recurrent_recurrent_regularizer_l1
-        self.recurrent_recurrent_regularizer_l2 = recurrent_recurrent_regularizer_l2
-        self.recurrent_bias_regularizer_l1 = recurrent_bias_regularizer_l1
-        self.recurrent_bias_regularizer_l2 = recurrent_bias_regularizer_l2
-        self.recurrent_activity_regularizer_l1 = recurrent_activity_regularizer_l1
-        self.recurrent_activity_regularizer_l2 = recurrent_activity_regularizer_l2
-        self.recurrent_kernel_constraint = recurrent_kernel_constraint
-        self.recurrent_recurrent_constraint = recurrent_recurrent_constraint
-        self.recurrent_bias_constraint = recurrent_bias_constraint
-        self.recurrent_dropout = recurrent_dropout
-        self.recurrent_recurrent_dropout = recurrent_recurrent_dropout
-        self.recurrent_return_sequences = recurrent_return_sequences
-        self.recurrent_go_backwards = recurrent_go_backwards
-        self.recurrent_stateful = recurrent_stateful
-        self.recurrent_unroll = recurrent_unroll
-        self.recurrent_implementation = recurrent_implementation
-        self.batchnormalization = batchnormalization
-        self.batchnormalization_axis = batchnormalization_axis
-        self.batchnormalization_momentum = batchnormalization_momentum
-        self.batchnormalization_epsilon = batchnormalization_epsilon
-        self.batchnormalization_center = batchnormalization_center
-        self.batchnormalization_scale = batchnormalization_scale
-        self.batchnormalization_beta_initializer = batchnormalization_beta_initializer
-        self.batchnormalization_gamma_initializer = batchnormalization_gamma_initializer
-        self.batchnormalization_moving_mean_initializer = batchnormalization_moving_mean_initializer
-        self.batchnormalization_moving_variance_initializer = batchnormalization_moving_variance_initializer
-        self.batchnormalization_beta_regularizer_l1 = batchnormalization_beta_regularizer_l1
-        self.batchnormalization_beta_regularizer_l2 = batchnormalization_beta_regularizer_l2
-        self.batchnormalization_gamma_regularizer_l1 = batchnormalization_gamma_regularizer_l1
-        self.batchnormalization_gamma_regularizer_l2 = batchnormalization_gamma_regularizer_l2
-        self.batchnormalization_beta_constraint = batchnormalization_beta_constraint
-        self.batchnormalization_gamma_constraint = batchnormalization_gamma_constraint
-        self.dense_units = dense_units
-        self.dense_activation = dense_activation
-        self.dense_use_bias = dense_use_bias
-        self.dense_kernel_initializer = dense_kernel_initializer
-        self.dense_bias_initializer = dense_bias_initializer
-        self.dense_kernel_regularizer_l1 = dense_kernel_regularizer_l1
-        self.dense_kernel_regularizer_l2 = dense_kernel_regularizer_l2
-        self.dense_bias_regularizer_l1 = dense_bias_regularizer_l1
-        self.dense_bias_regularizer_l2 = dense_bias_regularizer_l2
-        self.dense_activity_regularizer_l1 = dense_activity_regularizer_l1
-        self.dense_activity_regularizer_l2 = dense_activity_regularizer_l2
-        self.dense_kernel_constraint = dense_kernel_constraint
-        self.dense_bias_constraint = dense_bias_constraint
-        self.output_activation = output_activation if output_activation is not None else self.output_activation
-        self.output_use_bias = output_use_bias
-        self.output_kernel_initializer = output_kernel_initializer
-        self.output_bias_initializer = output_bias_initializer
-        self.output_kernel_regularizer_l1 = output_kernel_regularizer_l1
-        self.output_kernel_regularizer_l2 = output_kernel_regularizer_l2
-        self.output_bias_regularizer_l1 = output_bias_regularizer_l1
-        self.output_bias_regularizer_l2 = output_bias_regularizer_l2
-        self.output_activity_regularizer_l1 = output_activity_regularizer_l1
-        self.output_activity_regularizer_l2 = output_activity_regularizer_l2
-        self.output_kernel_constraint = output_kernel_constraint
-        self.output_bias_constraint = output_bias_constraint
-        self.dropout_rate = dropout_rate
-        self.dropout_noise_shape = dropout_noise_shape
-        self.dropout_seed = dropout_seed
-        self.solver = solver
-        self.lr = lr
-        self.momentum = momentum
-        self.nesterov = nesterov
-        self.decay = decay
-        self.rho = rho
-        self.epsilon = epsilon
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
-        self.schedule_decay = schedule_decay
-        self.loss = loss if loss is not None else self.loss
-        self.metrics = metrics
-        self.loss_weights = loss_weights
-        self.sample_weight_mode = sample_weight_mode
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.verbose = verbose
-        self.early_stopping = early_stopping
-        self.tol = tol
-        self.patience = patience
-        self.validation_split = validation_split
-        self.validation_data = validation_data
-        self.shuffle = shuffle
-        self.class_weight = class_weight
-        self.sample_weight = sample_weight
-        self.initial_epoch = initial_epoch
+        for k, v in locals().items():
+            if k != 'self':
+                self.__dict__[k] = v
 
     @staticmethod
     def _regularize(lambda1, lambda2):
@@ -832,38 +718,15 @@ class BaseFeedForward(BaseEstimator):
         self
 
         """
-        self.solver = solver if solver is not None else self.solver
-        self.lr = lr if lr is not None else self.lr
-        self.momentum = momentum if momentum is not None else self.momentum
-        self.nesterov = nesterov if nesterov is not None else self.nesterov
-        self.decay = decay if decay is not None else self.decay
-        self.rho = rho if rho is not None else self.rho
-        self.epsilon = epsilon if epsilon is not None else self.epsilon
-        self.beta_1 = beta_1 if beta_1 is not None else self.beta_1
-        self.beta_2 = beta_2 if beta_2 is not None else self.beta_2
-        self.schedule_decay = schedule_decay if schedule_decay is not None else self.schedule_decay
-        self.loss = loss if loss is not None else self.loss
-        self.metrics = metrics if metrics is not None else self.metrics
-        self.loss_weights = loss_weights if loss_weights is not None else self.loss_weights
-        self.sample_weight_mode = sample_weight_mode if sample_weight_mode is not None else self.sample_weight_mode
-        self.batch_size = batch_size if batch_size is not None else self.batch_size
-        self.epochs = epochs if epochs is not None else self.epochs
-        self.verbose = verbose if verbose is not None else self.verbose
-        self.early_stopping = early_stopping if early_stopping is not None else self.early_stopping
-        self.tol = tol if tol is not None else self.tol
-        self.patience = patience if patience is not None else self.patience
-        self.validation_split = validation_split if validation_split is not None else self.validation_split
-        self.validation_data = validation_data if validation_data is not None else self.validation_data
-        self.shuffle = shuffle if shuffle is not None else self.shuffle
-        self.class_weight = class_weight if class_weight is not None else self.class_weight
-        self.sample_weight = sample_weight if sample_weight is not None else self.sample_weight
-        self.initial_epoch = initial_epoch if initial_epoch is not None else self.initial_epoch
+        for k, v in locals().items():
+            if (k != 'self') and (v is not None):
+                self.__dict__[k] = v
         y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
-        if self.recurrent_units is not None:
-            X = time_series_tensor(X, self.recurrent_window)
-            y = time_series_tensor(y, self.recurrent_window) if self.recurrent_return_sequences else y[self.recurrent_window - 1:]
         X, y = check_X_y(X, y, ensure_2d=False, allow_nd=True,
                          multi_output=True)
+        if self.recurrent_window is not None:
+            X = time_series_tensor(X, self.recurrent_window)
+            y = time_series_tensor(y, self.recurrent_window) if self.recurrent_return_sequences else y[self.recurrent_window - 1:]
         self.model_ = self._model(X, y)
         self.model_.compile(self._solver(self.solver), self.loss,
                             metrics=self.metrics,
@@ -903,13 +766,19 @@ class BaseFeedForward(BaseEstimator):
 
         """
         check_is_fitted(self, ['model_', 'history_'])
-        if self.recurrent_units is not None:
+        if self.recurrent_window is not None:
             X = time_series_tensor(X, self.recurrent_window)
         X = check_array(X, ensure_2d=False, allow_nd=True)
         preds = self.model_.predict(X, batch_size=batch_size, verbose=verbose)
         return preds.reshape((len(preds))) if (len(preds.shape) == 2 and preds.shape[1] == 1) else preds
 
-    transform = predict
+    def transform(self, X):
+        check_is_fitted(self, ['model_', 'history_'])
+        if self.recurrent_window is not None:
+            X = time_series_tensor(X, self.recurrent_window)
+        propagate = K.function([self.model_.layers[0].input],
+                               [self.model_.layers[-2].output])
+        return propagate([X])[0]
 
     def score(self, X, y, sample_weight=None, metric=r2_score):
         """Return the score of the model on the data X.
@@ -933,7 +802,7 @@ class BaseFeedForward(BaseEstimator):
         """
         check_is_fitted(self, ['model_', 'history_'])
         y = y.reshape((len(y), 1)) if len(y.shape) == 1 else y
-        if self.recurrent_units is not None:
+        if self.recurrent_window is not None:
             X = time_series_tensor(X, self.recurrent_window)
             y = time_series_tensor(y, self.recurrent_window) if self.recurrent_return_sequences else y[self.recurrent_window - 1:]
         X, y = check_X_y(X, y, ensure_2d=False, allow_nd=True,
@@ -946,13 +815,13 @@ class BaseFeedForward(BaseEstimator):
 ###############################################################################
 
 
-class FFClassifier(BaseFeedForward, ClassifierMixin, TransformerMixin):
+class FFClassifier(BaseFeedForward, ClassifierMixin):
 
     __doc__ = BaseFeedForward.__doc__
 
-    output_activation = 'softmax'
-
-    loss = 'categorical_crossentropy'
+    __init__ = partialmethod(BaseFeedForward.__init__,
+                             output_activation='softmax',
+                             loss='categorical_crossentropy')
 
     def fit(self, X, y, sample_weight=None, **kwargs):
         self.classes_ = np.unique(y)
@@ -967,12 +836,7 @@ class FFClassifier(BaseFeedForward, ClassifierMixin, TransformerMixin):
         return BaseFeedForward.predict(self, X, **kwargs).argmax(axis=1)
     predict.__doc__ = BaseFeedForward.predict.__doc__
 
-    transform = predict_proba
-
-    def score(self, X, y, sample_weight=None, metric=accuracy_score):
-        return BaseFeedForward.score(self, X, y, sample_weight=sample_weight,
-                                     metric=metric)
-    score.__doc__ = BaseFeedForward.score.__doc__
+    score = partialmethod(BaseFeedForward.score, metric=accuracy_score)
 
 
 ###############################################################################
@@ -980,10 +844,4 @@ class FFClassifier(BaseFeedForward, ClassifierMixin, TransformerMixin):
 ###############################################################################
 
 
-class FFRegressor(BaseFeedForward, RegressorMixin, TransformerMixin):
-
-    __doc__ = BaseFeedForward.__doc__
-
-    output_activation = 'linear'
-
-    loss = 'mse'
+class FFRegressor(BaseFeedForward, RegressorMixin): pass

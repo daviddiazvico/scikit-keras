@@ -122,6 +122,8 @@ def test_class():
         assert isinstance(preds, np.ndarray)
         score = predictor.score(data.data, data.target)
         assert isinstance(score, float)
+        transformations = predictor.transform(data.data)
+        assert transformations.shape == data.data.shape
 
 
 ###############################################################################

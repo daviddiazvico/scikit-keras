@@ -43,24 +43,6 @@ class Straight:
                                     Initializer for the kernel weights matrix.
     convolution_bias_initializer: string/function, default='zeros'
                                   Initializer for the bias vector.
-    convolution_kernel_regularizer_l1: float, default=None
-                                       L1 regularization factor applied to the
-                                       kernel weights matrix.
-    convolution_kernel_regularizer_l2: float, default=None
-                                       L2 regularization factor applied to the
-                                       kernel weights matrix.
-    convolution_bias_regularizer_l1: float, default=None
-                                     L1 regularization factor applied to the
-                                     bias vector.
-    convolution_bias_regularizer_l2: float, default=None
-                                     L2 regularization factor applied to the
-                                     bias vector.
-    convolution_activity_regularizer_l1: float, default=None
-                                     L1 regularization factor applied to the
-                                     output of the layer.
-    convolution_activity_regularizer_l2: float, default=None
-                                     L2 regularization factor applied to the
-                                     output of the layer.
     convolution_kernel_constraint: function, default=None
                                    Constraint function applied to the kernel
                                    matrix.
@@ -92,30 +74,6 @@ class Straight:
     recurrent_unit_forget_bias: boolean, default=True
                                 If True, add 1 to the bias of the forget gate
                                 at initialization.
-    recurrent_kernel_regularizer_l1: float, default=None
-                                     L1 regularization factor applied to the
-                                     kernel weights matrix.
-    recurrent_kernel_regularizer_l2: float, default=None
-                                     L2 regularization factor applied to the
-                                     kernel weights matrix.
-    recurrent_recurrent_regularizer_l1: float, default=None
-                                        L1 regularization factor applied to the
-                                        recurrent_kernel weights matrix.
-    recurrent_recurrent_regularizer_l2: float, default=None
-                                        L2 regularization factor applied to the
-                                        recurrent_kernel weights matrix.
-    recurrent_bias_regularizer_l1: float, default=None
-                                   L1 regularization factor applied to the bias
-                                   vector.
-    recurrent_bias_regularizer_l2: float, default=None
-                                   L2 regularization factor applied to the bias
-                                   vector.
-    recurrent_activity_regularizer_l1: float, default=None
-                                       L1 regularization factor applied to the
-                                       output of the layer.
-    recurrent_activity_regularizer_l2: float, default=None
-                                       L2 regularization factor applied to the
-                                       output of the layer.
     recurrent_kernel_constraint: function, default=None
                                  Constraint function applied to the kernel
                                  weights matrix.
@@ -170,18 +128,6 @@ class Straight:
                                                     default='ones'
                                                     Initializer for the moving
                                                     variance.
-    batchnormalization_beta_regularizer_l1: float, default=None
-                                            L1 regularization factor applied to
-                                            the beta weight.
-    batchnormalization_beta_regularizer_l2: float, default=None
-                                            L2 regularization factor applied to
-                                            the beta weight.
-    batchnormalization_gamma_regularizer_l1: float, default=None
-                                            L1 regularization factor applied to
-                                            the gamma  weight.
-    batchnormalization_gamma_regularizer_l2: float, default=None
-                                            L2 regularization factor applied to
-                                            the gamma  weight.
     batchnormalization_beta_constraint: function, default=None
                                         Optional constraint for the beta weight.
     batchnormalization_gamma_constraint: function, default=None
@@ -197,24 +143,6 @@ class Straight:
                               Initializer for the kernel weights matrix.
     dense_bias_initializer: string/function, default='zeros'
                             Initializer for the bias vector.
-    dense_kernel_regularizer_l1: float, default=None
-                                  L1 regularization factor applied to the kernel
-                                  weights matrix.
-    dense_kernel_regularizer_l2: float, default=None
-                                  L2 regularization factor applied to the kernel
-                                  weights matrix.
-    dense_bias_regularizer_l1: float, default=None
-                               L1 regularization factor applied to the bias
-                               vector.
-    dense_bias_regularizer_l2: float, default=None
-                               L2 regularization factor applied to the bias
-                               vector.
-    dense_activity_regularizer_l1: float, default=None
-                                   L1 regularization factor applied to the
-                                   output of the layer.
-    dense_activity_regularizer_l2: float, default=None
-                                   L2 regularization factor applied to the
-                                   output of the layer.
     dense_kernel_constraint: function, default=None
                              Constraint function applied to the kernel weights
                              matrix.
@@ -227,6 +155,36 @@ class Straight:
                          multiplied with the input.
     dropout_seed: integer, default=None
                   Random seed.
+    kernel_regularizer_l1: float, default=None
+                           L1 regularization factor applied to the kernel
+                           weights matrix.
+    kernel_regularizer_l2: float, default=None
+                           L2 regularization factor applied to the kernel
+                           weights matrix.
+    bias_regularizer_l1: float, default=None
+                         L1 regularization factor applied to the bias vector.
+    bias_regularizer_l2: float, default=None
+                         L2 regularization factor applied to the bias vector.
+    activity_regularizer_l1: float, default=None
+                             L1 regularization factor applied to the output of
+                             the layer.
+    activity_regularizer_l2: float, default=None
+                             L2 regularization factor applied to the output of
+                             the layer.
+    recurrent_regularizer_l1: float, default=None
+                              L1 regularization factor applied to the
+                              recurrent_kernel weights matrix.
+    recurrent_regularizer_l2: float, default=None
+                              L2 regularization factor applied to the
+                              recurrent_kernel weights matrix.
+    beta_regularizer_l1: float, default=None
+                         L1 regularization factor applied to the beta weight.
+    beta_regularizer_l2: float, default=None
+                         L2 regularization factor applied to the beta weight.
+    gamma_regularizer_l1: float, default=None
+                          L1 regularization factor applied to the gamma  weight.
+    gamma_regularizer_l2: float, default=None
+                          L2 regularization factor applied to the gamma  weight.
 
     """
 
@@ -236,12 +194,6 @@ class Straight:
                  convolution_use_bias=True,
                  convolution_kernel_initializer='glorot_uniform',
                  convolution_bias_initializer='zeros',
-                 convolution_kernel_regularizer_l1=None,
-                 convolution_kernel_regularizer_l2=None,
-                 convolution_bias_regularizer_l1=None,
-                 convolution_bias_regularizer_l2=None,
-                 convolution_activity_regularizer_l1=None,
-                 convolution_activity_regularizer_l2=None,
                  convolution_kernel_constraint=None,
                  convolution_bias_constraint=None, pooling_type='max',
                  pooling_pool_size=None, pooling_strides=None,
@@ -253,14 +205,6 @@ class Straight:
                  recurrent_recurrent_initializer='orthogonal',
                  recurrent_bias_initializer='zeros',
                  recurrent_unit_forget_bias=True,
-                 recurrent_kernel_regularizer_l1=None,
-                 recurrent_kernel_regularizer_l2=None,
-                 recurrent_recurrent_regularizer_l1=None,
-                 recurrent_recurrent_regularizer_l2=None,
-                 recurrent_bias_regularizer_l1=None,
-                 recurrent_bias_regularizer_l2=None,
-                 recurrent_activity_regularizer_l1=None,
-                 recurrent_activity_regularizer_l2=None,
                  recurrent_kernel_constraint=None,
                  recurrent_recurrent_constraint=None,
                  recurrent_bias_constraint=None, recurrent_dropout=0.0,
@@ -275,22 +219,19 @@ class Straight:
                  batchnormalization_gamma_initializer='ones',
                  batchnormalization_moving_mean_initializer='zeros',
                  batchnormalization_moving_variance_initializer='ones',
-                 batchnormalization_beta_regularizer_l1=None,
-                 batchnormalization_beta_regularizer_l2=None,
-                 batchnormalization_gamma_regularizer_l1=None,
-                 batchnormalization_gamma_regularizer_l2=None,
                  batchnormalization_beta_constraint=None,
                  batchnormalization_gamma_constraint=None, dense_units=None,
                  dense_activation='relu', dense_use_bias=True,
                  dense_kernel_initializer='he_uniform',
-                 dense_bias_initializer='zeros',
-                 dense_kernel_regularizer_l1=None,
-                 dense_kernel_regularizer_l2=None,
-                 dense_bias_regularizer_l1=None, dense_bias_regularizer_l2=None,
-                 dense_activity_regularizer_l1=None,
-                 dense_activity_regularizer_l2=None,
-                 dense_kernel_constraint=None, dense_bias_constraint=None,
-                 dropout_rate=0.0, dropout_noise_shape=None, dropout_seed=None):
+                 dense_bias_initializer='zeros', kernel_regularizer_l1=None,
+                 kernel_regularizer_l2=None, bias_regularizer_l1=None,
+                 bias_regularizer_l2=None, activity_regularizer_l1=None,
+                 activity_regularizer_l2=None, recurrent_regularizer_l1=None,
+                 recurrent_regularizer_l2=None, beta_regularizer_l1=None,
+                 beta_regularizer_l2=None, gamma_regularizer_l1=None,
+                 gamma_regularizer_l2=None, dense_kernel_constraint=None,
+                 dense_bias_constraint=None, dropout_rate=0.0,
+                 dropout_noise_shape=None, dropout_seed=None):
         for k, v in locals().items():
             if k != 'self': self.__dict__[k] = v
 
@@ -309,12 +250,9 @@ class Straight:
                                                        use_bias=self.convolution_use_bias,
                                                        kernel_initializer=self.convolution_kernel_initializer,
                                                        bias_initializer=self.convolution_bias_initializer,
-                                                       kernel_regularizer=regularize(self.convolution_kernel_regularizer_l1,
-                                                                                     self.convolution_kernel_regularizer_l2),
-                                                       bias_regularizer=regularize(self.convolution_bias_regularizer_l1,
-                                                                                   self.convolution_bias_regularizer_l2),
-                                                       activity_regularizer=regularize(self.convolution_activity_regularizer_l1,
-                                                                                       self.convolution_activity_regularizer_l2),
+                                                       kernel_regularizer=self._kernel_regularizer,
+                                                       bias_regularizer=self._bias_regularizer,
+                                                       activity_regularizer=self._activity_regularizer,
                                                        kernel_constraint=self.convolution_kernel_constraint,
                                                        bias_constraint=self.convolution_bias_constraint)
             if return_sequences: layer = TimeDistributed(layer)
@@ -343,14 +281,10 @@ class Straight:
                                            recurrent_initializer=self.recurrent_recurrent_initializer,
                                            bias_initializer=self.recurrent_bias_initializer,
                                            unit_forget_bias=self.recurrent_unit_forget_bias,
-                                           kernel_regularizer=regularize(self.recurrent_kernel_regularizer_l1,
-                                                                         self.recurrent_kernel_regularizer_l2),
-                                           recurrent_regularizer=regularize(self.recurrent_recurrent_regularizer_l1,
-                                                                            self.recurrent_recurrent_regularizer_l2),
-                                           bias_regularizer=regularize(self.recurrent_bias_regularizer_l1,
-                                                                       self.recurrent_bias_regularizer_l2),
-                                           activity_regularizer=regularize(self.recurrent_activity_regularizer_l1,
-                                                                           self.recurrent_activity_regularizer_l2),
+                                           kernel_regularizer=self._kernel_regularizer,
+                                           recurrent_regularizer=self._recurrent_regularizer,
+                                           bias_regularizer=self._bias_regularizer,
+                                           activity_regularizer=self._activity_regularizer,
                                            kernel_constraint=self.recurrent_kernel_constraint,
                                            recurrent_constraint=self.recurrent_recurrent_constraint,
                                            bias_constraint=self.recurrent_bias_constraint,
@@ -375,10 +309,8 @@ class Straight:
                                       gamma_initializer=self.batchnormalization_gamma_initializer,
                                       moving_mean_initializer=self.batchnormalization_moving_mean_initializer,
                                       moving_variance_initializer=self.batchnormalization_moving_variance_initializer,
-                                      beta_regularizer=regularize(self.batchnormalization_beta_regularizer_l1,
-                                                                  self.batchnormalization_beta_regularizer_l2),
-                                      gamma_regularizer=regularize(self.batchnormalization_gamma_regularizer_l1,
-                                                                   self.batchnormalization_gamma_regularizer_l2),
+                                      beta_regularizer=self._beta_regularizer,
+                                      gamma_regularizer=self._gamma_regularizer,
                                       beta_constraint=self.batchnormalization_beta_constraint,
                                       gamma_constraint=self.batchnormalization_gamma_constraint)
             if self.recurrent_return_sequences: layer = TimeDistributed(layer)
@@ -387,12 +319,9 @@ class Straight:
                       use_bias=self.dense_use_bias,
                       kernel_initializer=self.dense_kernel_initializer,
                       bias_initializer=self.dense_bias_initializer,
-                      kernel_regularizer=regularize(self.dense_kernel_regularizer_l1,
-                                                    self.dense_kernel_regularizer_l2),
-                      bias_regularizer=regularize(self.dense_bias_regularizer_l1,
-                                                  self.dense_bias_regularizer_l2),
-                      activity_regularizer=regularize(self.dense_activity_regularizer_l1,
-                                                      self.dense_activity_regularizer_l2),
+                      kernel_regularizer=self._kernel_regularizer,
+                      bias_regularizer=self._bias_regularizer,
+                      activity_regularizer=self._activity_regularizer,
                       kernel_constraint=self.dense_kernel_constraint,
                       bias_constraint=self.dense_bias_constraint)
         if self.recurrent_return_sequences: layer = TimeDistributed(layer)
@@ -405,6 +334,18 @@ class Straight:
         return x
 
     def __call__(self, z):
+        self._kernel_regularizer = regularize(self.kernel_regularizer_l1,
+                                              self.kernel_regularizer_l2)
+        self._bias_regularizer = regularize(self.bias_regularizer_l1,
+                                            self.bias_regularizer_l2)
+        self._activity_regularizer = regularize(self.activity_regularizer_l1,
+                                                self.activity_regularizer_l2)
+        self._recurrent_regularizer = regularize(self.recurrent_regularizer_l1,
+                                                 self.recurrent_regularizer_l2)
+        self._beta_regularizer = regularize(self.beta_regularizer_l1,
+                                            self.beta_regularizer_l2)
+        self._gamma_regularizer = regularize(self.gamma_regularizer_l1,
+                                             self.gamma_regularizer_l2)
         if (self.convolution_filters is not None) or (self.convolution_kernel_size is not None):
             if len(self.convolution_filters) == len(self.convolution_kernel_size):
                 if self.convolution_strides is None: self.convolution_strides = [[1] * len(k) for k in self.convolution_kernel_size]

@@ -133,7 +133,7 @@ def test_optimizer():
     data = load_iris()
     predictor = FFClassifier()
     for optimizer in ('adam', 'sgd', 'rmsprop', 'adagrad', 'adadelta', 'adamax',
-                   'nadam'):
+                      'nadam'):
         predictor.fit(data.data, data.target, optimizer=optimizer, epochs=10)
         assert isinstance(predictor, FFClassifier)
 

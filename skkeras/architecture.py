@@ -334,18 +334,18 @@ class Straight:
         return x
 
     def __call__(self, z):
-        self._kernel_regularizer = regularize(self.kernel_regularizer_l1,
-                                              self.kernel_regularizer_l2)
-        self._bias_regularizer = regularize(self.bias_regularizer_l1,
-                                            self.bias_regularizer_l2)
-        self._activity_regularizer = regularize(self.activity_regularizer_l1,
-                                                self.activity_regularizer_l2)
-        self._recurrent_regularizer = regularize(self.recurrent_regularizer_l1,
-                                                 self.recurrent_regularizer_l2)
-        self._beta_regularizer = regularize(self.beta_regularizer_l1,
-                                            self.beta_regularizer_l2)
-        self._gamma_regularizer = regularize(self.gamma_regularizer_l1,
-                                             self.gamma_regularizer_l2)
+        self._kernel_regularizer = regularize(l1=self.kernel_regularizer_l1,
+                                              l2=self.kernel_regularizer_l2)
+        self._bias_regularizer = regularize(l1=self.bias_regularizer_l1,
+                                            l2=self.bias_regularizer_l2)
+        self._activity_regularizer = regularize(l1=self.activity_regularizer_l1,
+                                                l2=self.activity_regularizer_l2)
+        self._recurrent_regularizer = regularize(l1=self.recurrent_regularizer_l1,
+                                                 l2=self.recurrent_regularizer_l2)
+        self._beta_regularizer = regularize(l1=self.beta_regularizer_l1,
+                                            l2=self.beta_regularizer_l2)
+        self._gamma_regularizer = regularize(l1=self.gamma_regularizer_l1,
+                                             l2=self.gamma_regularizer_l2)
         if (self.convolution_filters is not None) or (self.convolution_kernel_size is not None):
             if len(self.convolution_filters) == len(self.convolution_kernel_size):
                 if self.convolution_strides is None: self.convolution_strides = [[1] * len(k) for k in self.convolution_kernel_size]

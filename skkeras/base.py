@@ -12,7 +12,7 @@ from keras.layers import Dense, Input, TimeDistributed
 from keras.models import Model, load_model, save_model
 from keras.optimizers import (Adadelta, Adagrad, Adam, Adamax, Nadam, RMSprop,
                               SGD)
-from keras.regularizers import l1, l2, l1_l2
+from keras.regularizers import l1 as l1_, l2 as l2_, l1_l2 as l1_l2_
 from keras.utils import to_categorical
 import numpy as np
 from sklearn.base import (BaseEstimator, ClassifierMixin, RegressorMixin,
@@ -52,9 +52,9 @@ Model.__setstate__ = __setstate__
 ###############################################################################
 
 
-def _generate_optimizer(optimizer='adam', lr=0.001, momentum=0.0, nesterov=False,
-                       decay=0.0, rho=0.9, epsilon=1e-08, beta_1=0.9,
-                       beta_2=0.999, schedule_decay=0.004):
+def _optimizer(optimizer='adam', lr=0.001, momentum=0.0, nesterov=False,
+               decay=0.0, rho=0.9, epsilon=1e-08, beta_1=0.9, beta_2=0.999,
+               schedule_decay=0.004):
     """Optimizer generator.
 
     This function generates the selected optimizer.
@@ -84,23 +84,21 @@ def _generate_optimizer(optimizer='adam', lr=0.001, momentum=0.0, nesterov=False
     Optimizer
 
     """
-    available_optimizers = {'sgd': SGD(lr=lr, momentum=momentum, decay=decay,
-                                       nesterov=nesterov),
-                            'rmsprop': RMSprop(lr=lr, rho=rho, epsilon=epsilon,
-                                               decay=decay),
-                            'adagrad': Adagrad(lr=lr, epsilon=epsilon,
-                                               decay=decay),
-                            'adadelta': Adadelta(lr=lr, rho=rho,
-                                                 epsilon=epsilon, decay=decay),
-                            'adam': Adam(lr=lr, beta_1=beta_1, beta_2=beta_2,
-                                         epsilon=epsilon, decay=decay),
-                            'adamax': Adamax(lr=lr, beta_1=beta_1,
-                                             beta_2=beta_2, epsilon=epsilon,
-                                             decay=decay),
-                            'nadam': Nadam(lr=lr, beta_1=beta_1, beta_2=beta_2,
-                                           epsilon=epsilon,
-                                           schedule_decay=schedule_decay)}
-    return available_optimizers[optimizer]
+    optimizers = {'sgd': SGD(lr=lr, momentum=momentum, decay=decay,
+                             nesterov=nesterov),
+                  'rmsprop': RMSprop(lr=lr, rho=rho, epsilon=epsilon,
+                                     decay=decay),
+                  'adagrad': Adagrad(lr=lr, epsilon=epsilon, decay=decay),
+                  'adadelta': Adadelta(lr=lr, rho=rho, epsilon=epsilon,
+                                       decay=decay),
+                  'adam': Adam(lr=lr, beta_1=beta_1, beta_2=beta_2,
+                               epsilon=epsilon, decay=decay),
+                  'adamax': Adamax(lr=lr, beta_1=beta_1, beta_2=beta_2,
+                                   epsilon=epsilon, decay=decay),
+                  'nadam': Nadam(lr=lr, beta_1=beta_1, beta_2=beta_2,
+                                 epsilon=epsilon,
+                                 schedule_decay=schedule_decay)}
+    return optimizers[optimizer]
 
 
 ###############################################################################
@@ -108,24 +106,33 @@ def _generate_optimizer(optimizer='adam', lr=0.001, momentum=0.0, nesterov=False
 ###############################################################################
 
 
-def _time_series_tensor(X, window):
-    """Time series tensor.
+def _time_series(X, y=None, window=None, return_sequences=False):
+    """Time series transformation.
 
-    Transform a tensor to a time series tensor.
+    Transform X, y tensors to time series tensors.
 
     Parameters
     ----------
-    X: numpy array]
-       Tensor.
+    X: numpy array of shape [n_samples, n_features]
+       Training set.
+    y: numpy array of shape [n_samples]
+       Target values.
     window: integer, default=None
             Time window length.
+    return_sequences: boolean, default=False
+                      Whether to return the last output in the output sequence,
+                      or the full sequence.
 
     Returns
     -------
-    Time series tensor.
+    Time series tensors.
 
     """
-    return np.array([X[i:i + window] for i in range(X.shape[0] - window + 1)])
+    if window is not None:
+        X = np.array([X[i:i + window] for i in range(X.shape[0] - window + 1)])
+        if y is not None:
+            y = np.array([y[i:i + window] for i in range(y.shape[0] - window + 1)]) if return_sequences else y[window - 1:]
+    return X, y
 
 
 ###############################################################################
@@ -133,27 +140,26 @@ def _time_series_tensor(X, window):
 ###############################################################################
 
 
-def regularize(lambda1=None, lambda2=None):
+def regularize(l1=None, l2=None):
     """Regularizer.
 
     Returns a regularizer.
 
     Parameters
     ----------
-    lambda1: float, default=None
-             L1 regularization factor.
-    lambda2: float, default=None
-             L2 regularization factor.
+    l1: float, default=None
+        L1 regularization factor.
+    l2: float, default=None
+        L2 regularization factor.
 
     Returns
     -------
     Regularizer.
 
     """
-    regularizer = {False: {False: None, True: l2(l=lambda2)},
-                   True: {False: l1(l=lambda1), True: l1_l2(l1=lambda1,
-                                                            l2=lambda2)}}
-    return regularizer[lambda1 is not None][lambda2 is not None]
+    regularizer = {False: {False: None, True: l2_(l=l2)},
+                   True: {False: l1_(l=l1), True: l1_l2_(l1=l1, l2=l2)}}
+    return regularizer[l1 is not None][l2 is not None]
 
 
 ###############################################################################
@@ -366,33 +372,32 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
         """
         for k, v in locals().items():
             if (k != 'self') and (v is not None): self.__dict__[k] = v
-            if len(y.shape) == 1: y = y.reshape((len(y), 1))
         X, y = check_X_y(X, y, allow_nd=True, multi_output=True)
-        if self.window is not None:
-            X = _time_series_tensor(X, self.window)
-            y = _time_series_tensor(y, self.window) if self.return_sequences else y[self.window - 1:]
+        if len(y.shape) == 1: y = y.reshape((len(y), 1))
+        X, y = _time_series(X, y=y, window=self.window,
+                            return_sequences=self.return_sequences)
         z = inputs = Input(shape=X.shape[1:])
         if self.architecture is not None: z = self.architecture(z)
         layer = Dense(int(np.prod(y.shape[1:])), activation=self.activation,
                       use_bias=self.use_bias,
                       kernel_initializer=self.kernel_initializer,
                       bias_initializer=self.bias_initializer,
-                      kernel_regularizer=regularize(self.kernel_regularizer_l1,
-                                                    self.kernel_regularizer_l2),
-                      bias_regularizer=regularize(self.bias_regularizer_l1,
-                                                  self.bias_regularizer_l2),
-                      activity_regularizer=regularize(self.activity_regularizer_l1,
-                                                      self.activity_regularizer_l2),
+                      kernel_regularizer=regularize(l1=self.kernel_regularizer_l1,
+                                                    l2=self.kernel_regularizer_l2),
+                      bias_regularizer=regularize(l1=self.bias_regularizer_l1,
+                                                  l2=self.bias_regularizer_l2),
+                      activity_regularizer=regularize(l1=self.activity_regularizer_l1,
+                                                      l2=self.activity_regularizer_l2),
                       kernel_constraint=self.kernel_constraint,
                       bias_constraint=self.bias_constraint)
         if self.return_sequences: layer = TimeDistributed(layer)
         output = layer(z)
-        optimizer = _generate_optimizer(optimizer=self.optimizer, lr=self.lr,
-                                       momentum=self.momentum,
-                                       nesterov=self.nesterov, decay=self.decay,
-                                       rho=self.rho, epsilon=self.epsilon,
-                                       beta_1=self.beta_1, beta_2=self.beta_2,
-                                       schedule_decay=self.schedule_decay)
+        optimizer = _optimizer(optimizer=self.optimizer, lr=self.lr,
+                               momentum=self.momentum, nesterov=self.nesterov,
+                               decay=self.decay, rho=self.rho,
+                               epsilon=self.epsilon, beta_1=self.beta_1,
+                               beta_2=self.beta_2,
+                               schedule_decay=self.schedule_decay)
         self.model_ = Model(inputs, output)
         self.model_.compile(optimizer, self.loss, metrics=self.metrics,
                             loss_weights=self.loss_weights,
@@ -433,8 +438,9 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
 
         """
         check_is_fitted(self, ['model_', 'history_'])
-        if self.window is not None: X = _time_series_tensor(X, self.window)
         X = check_array(X, allow_nd=True)
+        X, _ = _time_series(X, y=None, window=self.window,
+                            return_sequences=self.return_sequences)
         preds = self.model_.predict(X, batch_size=batch_size, verbose=verbose)
         return preds.reshape((len(preds))) if (len(preds.shape) == 2 and preds.shape[1] == 1) else preds
 
@@ -453,7 +459,9 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
 
         """
         check_is_fitted(self, ['model_', 'history_'])
-        if self.window is not None: X = _time_series_tensor(X, self.window)
+        X = check_array(X, allow_nd=True)
+        X, _ = _time_series(X, y=None, window=self.window,
+                            return_sequences=self.return_sequences)
         propagate = K.function([self.model_.layers[0].input],
                                [self.model_.layers[-2].output])
         return propagate([X])[0]
@@ -479,11 +487,10 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
 
         """
         check_is_fitted(self, ['model_', 'history_'])
-        if len(y.shape) == 1: y = y.reshape((len(y), 1))
-        if self.window is not None:
-            X = _time_series_tensor(X, self.window)
-            y = _time_series_tensor(y, self.window) if self.return_sequences else y[self.window - 1:]
         X, y = check_X_y(X, y, allow_nd=True, multi_output=True)
+        if len(y.shape) == 1: y = y.reshape((len(y), 1))
+        X, y = _time_series(X, y=y, window=self.window,
+                            return_sequences=self.return_sequences)
         return metric(y, self.predict(X), sample_weight=sample_weight)
 
 

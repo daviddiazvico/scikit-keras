@@ -2,11 +2,9 @@
 Scikit-learn-compatible Keras models
 
 ## Status
-[![Build Status](https://travis-ci.org/daviddiazvico/scikit-keras.svg?branch=master)](https://travis-ci.org/daviddiazvico/scikit-keras)
-[![Coverage Status](https://coveralls.io/repos/github/daviddiazvico/scikit-keras/badge.svg)](https://coveralls.io/github/daviddiazvico/scikit-keras)
+[![Build Status](https://travis-ci.com/daviddiazvico/scikit-keras.svg?branch=master)](https://travis-ci.com/daviddiazvico/scikit-keras)
 [![Maintainability](https://api.codeclimate.com/v1/badges/a37c9ee152b41a0cb577/maintainability)](https://codeclimate.com/github/daviddiazvico/scikit-keras/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/a37c9ee152b41a0cb577/test_coverage)](https://codeclimate.com/github/daviddiazvico/scikit-keras/test_coverage)
-[![Code Health](https://landscape.io/github/daviddiazvico/scikit-keras/master/landscape.svg?style=flat)](https://landscape.io/github/daviddiazvico/scikit-keras/master)
 
 ## Installation
 Available in [PyPI](https://pypi.python.org/pypi?:action=display&name=scikit-keras)

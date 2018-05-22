@@ -1,0 +1,449 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>skkeras.architecture &#8212; scikit-keras 0.1.8 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for skkeras.architecture</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Scikit-learn-compatible Keras model architectures.</span>
+
+<span class="sd">@author: David Diaz Vico</span>
+<span class="sd">@license: MIT</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="p">(</span><span class="n">AveragePooling1D</span><span class="p">,</span> <span class="n">AveragePooling2D</span><span class="p">,</span> <span class="n">AveragePooling3D</span><span class="p">,</span>
+                          <span class="n">BatchNormalization</span><span class="p">,</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">Dropout</span><span class="p">,</span> <span class="n">Flatten</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span>
+                          <span class="n">Conv1D</span><span class="p">,</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">Conv3D</span><span class="p">,</span> <span class="n">GRU</span><span class="p">,</span> <span class="n">MaxPooling1D</span><span class="p">,</span>
+                          <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="n">MaxPooling3D</span><span class="p">,</span> <span class="n">LSTM</span><span class="p">,</span> <span class="n">TimeDistributed</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="k">import</span> <span class="n">regularize</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Feed-forward architecture class</span>
+<span class="c1">###############################################################################</span>
+
+
+<div class="viewcode-block" id="Straight"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.architecture.Straight">[docs]</a><span class="k">class</span> <span class="nc">Straight</span><span class="p">:</span>
+
+    <span class="sd">&quot;&quot;&quot;Straight feed-forward architecture.</span>
+
+<span class="sd">    Basic straight feed-forward model architecture.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    convolution_filters: integer, default=None</span>
+<span class="sd">                         Dimensionality of the output space.</span>
+<span class="sd">    convolution_kernel_size: integer/tuple/list, default=None</span>
+<span class="sd">                             Dimensionality of the convolution window.</span>
+<span class="sd">    convolution_strides: integer/tuple/list, default=None</span>
+<span class="sd">                         Strides of the convolution.</span>
+<span class="sd">    convolution_padding: {&quot;valid&quot;, &quot;same&quot;}, default=&#39;valid&#39;</span>
+<span class="sd">    convolution_dilation_rate: integer/tuple/list, default=None</span>
+<span class="sd">                               Dilation rate to use for dilated convolution.</span>
+<span class="sd">    convolution_activation: string/function, default=None</span>
+<span class="sd">                            Activation function.</span>
+<span class="sd">    convolution_use_bias: boolean, default=True</span>
+<span class="sd">                          Whether the layer uses a bias vector.</span>
+<span class="sd">    convolution_kernel_initializer: string/function, default=&#39;glorot_uniform&#39;</span>
+<span class="sd">                                    Initializer for the kernel weights matrix.</span>
+<span class="sd">    convolution_bias_initializer: string/function, default=&#39;zeros&#39;</span>
+<span class="sd">                                  Initializer for the bias vector.</span>
+<span class="sd">    convolution_kernel_constraint: function, default=None</span>
+<span class="sd">                                   Constraint function applied to the kernel</span>
+<span class="sd">                                   matrix.</span>
+<span class="sd">    convolution_bias_constraint: function, default=None</span>
+<span class="sd">                                 Constraint function applied to the bias vector.</span>
+<span class="sd">    pooling_type: {&quot;max&quot;, &quot;average}, default=&#39;max&#39;</span>
+<span class="sd">    pooling_pool_size: integer/tuple/list, default=None</span>
+<span class="sd">                       Factors by which to downscale.</span>
+<span class="sd">    pooling_strides: integer/tuple/list, default=None</span>
+<span class="sd">                     Strides values.</span>
+<span class="sd">    pooling_padding: {&quot;valid&quot;, &quot;same&quot;}, default=&#39;valid&#39;</span>
+<span class="sd">    recurrent_type: {&quot;lstm&quot;, &quot;gru&quot;}, default=&#39;lstm&#39;</span>
+<span class="sd">    recurrent_units: integer, default=None</span>
+<span class="sd">                     Dimensionality of the output space.</span>
+<span class="sd">    recurrent_activation: string/function, default=&#39;tanh&#39;</span>
+<span class="sd">                          Activation function to use.</span>
+<span class="sd">    recurrent_recurrent_activation: string/function, default=&#39;hard_sigmoid&#39;</span>
+<span class="sd">                                    Activation function to use for the recurrent</span>
+<span class="sd">                                    step.</span>
+<span class="sd">    recurrent_use_bias: boolean, default=True</span>
+<span class="sd">                        Whether the layer uses a bias vector.</span>
+<span class="sd">    recurrent_kernel_initializer: string/function, default=&#39;glorot_uniform&#39;</span>
+<span class="sd">                                  Initializer for the kernel weights matrix.</span>
+<span class="sd">    recurrent_recurrent_initializer: string/function, default=&#39;orthogonal&#39;</span>
+<span class="sd">                                     Initializer for the recurrent_kernel</span>
+<span class="sd">                                     weights matrix.</span>
+<span class="sd">    recurrent_bias_initializer: string/function, default=&#39;zeros&#39;</span>
+<span class="sd">                                Initializer for the bias vector.</span>
+<span class="sd">    recurrent_unit_forget_bias: boolean, default=True</span>
+<span class="sd">                                If True, add 1 to the bias of the forget gate</span>
+<span class="sd">                                at initialization.</span>
+<span class="sd">    recurrent_kernel_constraint: function, default=None</span>
+<span class="sd">                                 Constraint function applied to the kernel</span>
+<span class="sd">                                 weights matrix.</span>
+<span class="sd">    recurrent_recurrent_constraint: function, default=None</span>
+<span class="sd">                                    Constraint function applied to the</span>
+<span class="sd">                                    recurrent_kernel weights matrix.</span>
+<span class="sd">    recurrent_bias_constraint: function, default=None</span>
+<span class="sd">                               Constraint function applied to the bias vector.</span>
+<span class="sd">    recurrent_dropout: float in [0, 1], default=0.0</span>
+<span class="sd">                       Fraction of the units to drop for the linear</span>
+<span class="sd">                       transformation of the inputs.</span>
+<span class="sd">    recurrent_recurrent_dropout: float in [0, 1], default=0.0</span>
+<span class="sd">                                 Fraction of the units to drop for the linear</span>
+<span class="sd">                                 transformation of the recurrent state.</span>
+<span class="sd">    recurrent_return_sequences: boolean, default=False</span>
+<span class="sd">                                Whether to return the last output in the output</span>
+<span class="sd">                                sequence, or the full sequence.</span>
+<span class="sd">    recurrent_go_backwards: boolean, default=False</span>
+<span class="sd">                            If True, process the input sequence backwards and</span>
+<span class="sd">                            return the reversed sequence.</span>
+<span class="sd">    recurrent_stateful: boolean, default=False</span>
+<span class="sd">                        If True, the last state for each sample at index i in a</span>
+<span class="sd">                        batch will be used as initial state for the sample of</span>
+<span class="sd">                        index i in the following batch.</span>
+<span class="sd">    recurrent_unroll: boolean, default=False</span>
+<span class="sd">                      If True, the network will be unrolled, else a symbolic</span>
+<span class="sd">                      loop will be used.</span>
+<span class="sd">    recurrent_implementation: {0, 1, 2}, default=0</span>
+<span class="sd">    batchnormalization: boolean, default=False</span>
+<span class="sd">                        Whether to perform batch normalization or not.</span>
+<span class="sd">    batchnormalization_axis: integer, default=-1</span>
+<span class="sd">                             The axis that should be normalized (typically the</span>
+<span class="sd">                             features axis).</span>
+<span class="sd">    batchnormalization_momentum: float, default=0.99</span>
+<span class="sd">                                 Momentum for the moving average.</span>
+<span class="sd">    batchnormalization_epsilon: float, default=0.001</span>
+<span class="sd">                                Small float added to variance to avoid dividing</span>
+<span class="sd">                                by zero.</span>
+<span class="sd">    batchnormalization_center: boolean, default=True</span>
+<span class="sd">                               If True, add offset of beta to normalized tensor.</span>
+<span class="sd">                               If False, beta is ignored.</span>
+<span class="sd">    batchnormalization_scale: boolean, default=True</span>
+<span class="sd">                              If True, multiply by gamma. If False, gamma is not</span>
+<span class="sd">                              used.</span>
+<span class="sd">    batchnormalization_beta_initializer: string/function, default=&#39;zeros&#39;</span>
+<span class="sd">                                         Initializer for the beta weight.</span>
+<span class="sd">    batchnormalization_gamma_initializer: string/function, default=&#39;ones&#39;</span>
+<span class="sd">                                          Initializer for the gamma weight.</span>
+<span class="sd">    batchnormalization_moving_mean_initializer: string/function, default=&#39;zeros&#39;</span>
+<span class="sd">                                                Initializer for the moving mean.</span>
+<span class="sd">    batchnormalization_moving_variance_initializer: string/function,</span>
+<span class="sd">                                                    default=&#39;ones&#39;</span>
+<span class="sd">                                                    Initializer for the moving</span>
+<span class="sd">                                                    variance.</span>
+<span class="sd">    batchnormalization_beta_constraint: function, default=None</span>
+<span class="sd">                                        Optional constraint for the beta weight.</span>
+<span class="sd">    batchnormalization_gamma_constraint: function, default=None</span>
+<span class="sd">                                         Optional constraint for the gamma</span>
+<span class="sd">                                         weight.</span>
+<span class="sd">    dense_units: integer, default=None</span>
+<span class="sd">                 Dimensionality of the output space.</span>
+<span class="sd">    dense_activation: string/function, default=&#39;relu&#39;</span>
+<span class="sd">                      Activation function to use.</span>
+<span class="sd">    dense_use_bias: boolean, default=True</span>
+<span class="sd">                    Whether the layer uses a bias vector.</span>
+<span class="sd">    dense_kernel_initializer: string/function, default=&#39;he_uniform&#39;</span>
+<span class="sd">                              Initializer for the kernel weights matrix.</span>
+<span class="sd">    dense_bias_initializer: string/function, default=&#39;zeros&#39;</span>
+<span class="sd">                            Initializer for the bias vector.</span>
+<span class="sd">    dense_kernel_constraint: function, default=None</span>
+<span class="sd">                             Constraint function applied to the kernel weights</span>
+<span class="sd">                             matrix.</span>
+<span class="sd">    dense_bias_constraint: function, default=None</span>
+<span class="sd">                           Constraint function applied to the bias vector.</span>
+<span class="sd">    dropout_rate: float in [0, 1], default=0.0</span>
+<span class="sd">                  Fraction of the input units to drop.</span>
+<span class="sd">    dropout_noise_shape: array-like, default=None</span>
+<span class="sd">                         shape of the binary dropout mask that will be</span>
+<span class="sd">                         multiplied with the input.</span>
+<span class="sd">    dropout_seed: integer, default=None</span>
+<span class="sd">                  Random seed.</span>
+<span class="sd">    kernel_regularizer_l1: float, default=None</span>
+<span class="sd">                           L1 regularization factor applied to the kernel</span>
+<span class="sd">                           weights matrix.</span>
+<span class="sd">    kernel_regularizer_l2: float, default=None</span>
+<span class="sd">                           L2 regularization factor applied to the kernel</span>
+<span class="sd">                           weights matrix.</span>
+<span class="sd">    bias_regularizer_l1: float, default=None</span>
+<span class="sd">                         L1 regularization factor applied to the bias vector.</span>
+<span class="sd">    bias_regularizer_l2: float, default=None</span>
+<span class="sd">                         L2 regularization factor applied to the bias vector.</span>
+<span class="sd">    activity_regularizer_l1: float, default=None</span>
+<span class="sd">                             L1 regularization factor applied to the output of</span>
+<span class="sd">                             the layer.</span>
+<span class="sd">    activity_regularizer_l2: float, default=None</span>
+<span class="sd">                             L2 regularization factor applied to the output of</span>
+<span class="sd">                             the layer.</span>
+<span class="sd">    recurrent_regularizer_l1: float, default=None</span>
+<span class="sd">                              L1 regularization factor applied to the</span>
+<span class="sd">                              recurrent_kernel weights matrix.</span>
+<span class="sd">    recurrent_regularizer_l2: float, default=None</span>
+<span class="sd">                              L2 regularization factor applied to the</span>
+<span class="sd">                              recurrent_kernel weights matrix.</span>
+<span class="sd">    beta_regularizer_l1: float, default=None</span>
+<span class="sd">                         L1 regularization factor applied to the beta weight.</span>
+<span class="sd">    beta_regularizer_l2: float, default=None</span>
+<span class="sd">                         L2 regularization factor applied to the beta weight.</span>
+<span class="sd">    gamma_regularizer_l1: float, default=None</span>
+<span class="sd">                          L1 regularization factor applied to the gamma  weight.</span>
+<span class="sd">    gamma_regularizer_l2: float, default=None</span>
+<span class="sd">                          L2 regularization factor applied to the gamma  weight.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">convolution_filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">convolution_kernel_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">convolution_strides</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">convolution_padding</span><span class="o">=</span><span class="s1">&#39;valid&#39;</span><span class="p">,</span>
+                 <span class="n">convolution_dilation_rate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">convolution_activation</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">convolution_use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">convolution_kernel_initializer</span><span class="o">=</span><span class="s1">&#39;glorot_uniform&#39;</span><span class="p">,</span>
+                 <span class="n">convolution_bias_initializer</span><span class="o">=</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
+                 <span class="n">convolution_kernel_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">convolution_bias_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pooling_type</span><span class="o">=</span><span class="s1">&#39;max&#39;</span><span class="p">,</span>
+                 <span class="n">pooling_pool_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pooling_strides</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">pooling_padding</span><span class="o">=</span><span class="s1">&#39;valid&#39;</span><span class="p">,</span> <span class="n">recurrent_type</span><span class="o">=</span><span class="s1">&#39;lstm&#39;</span><span class="p">,</span>
+                 <span class="n">recurrent_units</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">recurrent_activation</span><span class="o">=</span><span class="s1">&#39;tanh&#39;</span><span class="p">,</span>
+                 <span class="n">recurrent_recurrent_activation</span><span class="o">=</span><span class="s1">&#39;hard_sigmoid&#39;</span><span class="p">,</span>
+                 <span class="n">recurrent_use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">recurrent_kernel_initializer</span><span class="o">=</span><span class="s1">&#39;glorot_uniform&#39;</span><span class="p">,</span>
+                 <span class="n">recurrent_recurrent_initializer</span><span class="o">=</span><span class="s1">&#39;orthogonal&#39;</span><span class="p">,</span>
+                 <span class="n">recurrent_bias_initializer</span><span class="o">=</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
+                 <span class="n">recurrent_unit_forget_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">recurrent_kernel_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">recurrent_recurrent_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">recurrent_bias_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">recurrent_dropout</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                 <span class="n">recurrent_recurrent_dropout</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                 <span class="n">recurrent_return_sequences</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">recurrent_go_backwards</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">recurrent_stateful</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">recurrent_unroll</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">recurrent_implementation</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">batchnormalization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">batchnormalization_axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">batchnormalization_momentum</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+                 <span class="n">batchnormalization_epsilon</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+                 <span class="n">batchnormalization_center</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">batchnormalization_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">batchnormalization_beta_initializer</span><span class="o">=</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
+                 <span class="n">batchnormalization_gamma_initializer</span><span class="o">=</span><span class="s1">&#39;ones&#39;</span><span class="p">,</span>
+                 <span class="n">batchnormalization_moving_mean_initializer</span><span class="o">=</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
+                 <span class="n">batchnormalization_moving_variance_initializer</span><span class="o">=</span><span class="s1">&#39;ones&#39;</span><span class="p">,</span>
+                 <span class="n">batchnormalization_beta_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">batchnormalization_gamma_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dense_units</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">dense_activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">,</span> <span class="n">dense_use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">dense_kernel_initializer</span><span class="o">=</span><span class="s1">&#39;he_uniform&#39;</span><span class="p">,</span>
+                 <span class="n">dense_bias_initializer</span><span class="o">=</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span> <span class="n">kernel_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">kernel_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bias_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">bias_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">activity_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">activity_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">recurrent_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">recurrent_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">beta_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">beta_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gamma_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">gamma_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dense_kernel_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">dense_bias_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dropout_rate</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                 <span class="n">dropout_noise_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dropout_seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;self&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+    <span class="k">def</span> <span class="nf">_convolve_and_pool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">convolution_filters</span><span class="p">,</span>
+                           <span class="n">convolution_kernel_size</span><span class="p">,</span> <span class="n">convolution_strides</span><span class="p">,</span>
+                           <span class="n">convolution_dilation_rate</span><span class="p">,</span> <span class="n">pooling_pool_size</span><span class="p">,</span>
+                           <span class="n">pooling_strides</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">return_sequences</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">convolution_kernel_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">conv</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="n">Conv1D</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="n">Conv3D</span><span class="p">}</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">conv</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">convolution_kernel_size</span><span class="p">)](</span><span class="n">convolution_filters</span><span class="p">,</span> <span class="n">convolution_kernel_size</span><span class="p">,</span>
+                                                       <span class="n">strides</span><span class="o">=</span><span class="n">convolution_strides</span><span class="p">,</span>
+                                                       <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_padding</span><span class="p">,</span>
+                                                       <span class="n">dilation_rate</span><span class="o">=</span><span class="n">convolution_dilation_rate</span><span class="p">,</span>
+                                                       <span class="n">activation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_activation</span><span class="p">,</span>
+                                                       <span class="n">use_bias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_use_bias</span><span class="p">,</span>
+                                                       <span class="n">kernel_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_kernel_initializer</span><span class="p">,</span>
+                                                       <span class="n">bias_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_bias_initializer</span><span class="p">,</span>
+                                                       <span class="n">kernel_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernel_regularizer</span><span class="p">,</span>
+                                                       <span class="n">bias_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bias_regularizer</span><span class="p">,</span>
+                                                       <span class="n">activity_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_activity_regularizer</span><span class="p">,</span>
+                                                       <span class="n">kernel_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_kernel_constraint</span><span class="p">,</span>
+                                                       <span class="n">bias_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_bias_constraint</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">TimeDistributed</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pooling_pool_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;max&#39;</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="n">MaxPooling1D</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="n">MaxPooling3D</span><span class="p">},</span>
+                    <span class="s1">&#39;average&#39;</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="n">AveragePooling1D</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="n">AveragePooling2D</span><span class="p">,</span>
+                                <span class="mi">3</span><span class="p">:</span> <span class="n">AveragePooling3D</span><span class="p">}}</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">pool</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pooling_type</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">pooling_pool_size</span><span class="p">)](</span><span class="n">pool_size</span><span class="o">=</span><span class="n">pooling_pool_size</span><span class="p">,</span>
+                                                                    <span class="n">strides</span><span class="o">=</span><span class="n">pooling_strides</span><span class="p">,</span>
+                                                                    <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pooling_padding</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">TimeDistributed</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">return_tensors</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">Flatten</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">return_sequences</span><span class="p">:</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">TimeDistributed</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">def</span> <span class="nf">_recur</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">units</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">recur</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lstm&#39;</span><span class="p">:</span> <span class="n">LSTM</span><span class="p">,</span> <span class="s1">&#39;gru&#39;</span><span class="p">:</span> <span class="n">GRU</span><span class="p">}</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">recur</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_type</span><span class="p">](</span><span class="n">units</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_activation</span><span class="p">,</span>
+                                           <span class="n">recurrent_activation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_recurrent_activation</span><span class="p">,</span>
+                                           <span class="n">use_bias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_use_bias</span><span class="p">,</span>
+                                           <span class="n">kernel_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_kernel_initializer</span><span class="p">,</span>
+                                           <span class="n">recurrent_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_recurrent_initializer</span><span class="p">,</span>
+                                           <span class="n">bias_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_bias_initializer</span><span class="p">,</span>
+                                           <span class="n">unit_forget_bias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_unit_forget_bias</span><span class="p">,</span>
+                                           <span class="n">kernel_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernel_regularizer</span><span class="p">,</span>
+                                           <span class="n">recurrent_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_recurrent_regularizer</span><span class="p">,</span>
+                                           <span class="n">bias_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bias_regularizer</span><span class="p">,</span>
+                                           <span class="n">activity_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_activity_regularizer</span><span class="p">,</span>
+                                           <span class="n">kernel_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_kernel_constraint</span><span class="p">,</span>
+                                           <span class="n">recurrent_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_recurrent_constraint</span><span class="p">,</span>
+                                           <span class="n">bias_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_bias_constraint</span><span class="p">,</span>
+                                           <span class="n">dropout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_dropout</span><span class="p">,</span>
+                                           <span class="n">recurrent_dropout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_recurrent_dropout</span><span class="p">,</span>
+                                           <span class="n">return_sequences</span><span class="o">=</span><span class="n">return_sequences</span><span class="p">,</span>
+                                           <span class="n">go_backwards</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_go_backwards</span><span class="p">,</span>
+                                           <span class="n">stateful</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_stateful</span><span class="p">,</span>
+                                           <span class="n">unroll</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_unroll</span><span class="p">,</span>
+                                           <span class="n">implementation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_implementation</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">def</span> <span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">units</span><span class="p">,</span> <span class="n">dropout_noise_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization</span><span class="p">:</span>
+            <span class="n">layer</span><span class="o">=</span> <span class="n">BatchNormalization</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_axis</span><span class="p">,</span>
+                                      <span class="n">momentum</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_momentum</span><span class="p">,</span>
+                                      <span class="n">epsilon</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_epsilon</span><span class="p">,</span>
+                                      <span class="n">center</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_center</span><span class="p">,</span>
+                                      <span class="n">scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_scale</span><span class="p">,</span>
+                                      <span class="n">beta_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_beta_initializer</span><span class="p">,</span>
+                                      <span class="n">gamma_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_gamma_initializer</span><span class="p">,</span>
+                                      <span class="n">moving_mean_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_moving_mean_initializer</span><span class="p">,</span>
+                                      <span class="n">moving_variance_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_moving_variance_initializer</span><span class="p">,</span>
+                                      <span class="n">beta_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_beta_regularizer</span><span class="p">,</span>
+                                      <span class="n">gamma_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_gamma_regularizer</span><span class="p">,</span>
+                                      <span class="n">beta_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_beta_constraint</span><span class="p">,</span>
+                                      <span class="n">gamma_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batchnormalization_gamma_constraint</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_return_sequences</span><span class="p">:</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">TimeDistributed</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">units</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_activation</span><span class="p">,</span>
+                      <span class="n">use_bias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_use_bias</span><span class="p">,</span>
+                      <span class="n">kernel_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_kernel_initializer</span><span class="p">,</span>
+                      <span class="n">bias_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_bias_initializer</span><span class="p">,</span>
+                      <span class="n">kernel_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernel_regularizer</span><span class="p">,</span>
+                      <span class="n">bias_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bias_regularizer</span><span class="p">,</span>
+                      <span class="n">activity_regularizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_activity_regularizer</span><span class="p">,</span>
+                      <span class="n">kernel_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_kernel_constraint</span><span class="p">,</span>
+                      <span class="n">bias_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_bias_constraint</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_return_sequences</span><span class="p">:</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">TimeDistributed</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="mf">0.0</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout_rate</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dropout_rate</span><span class="p">,</span> <span class="n">noise_shape</span><span class="o">=</span><span class="n">dropout_noise_shape</span><span class="p">,</span>
+                            <span class="n">seed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dropout_seed</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_return_sequences</span><span class="p">:</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">TimeDistributed</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kernel_regularizer</span> <span class="o">=</span> <span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_regularizer_l1</span><span class="p">,</span>
+                                              <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_regularizer_l2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bias_regularizer</span> <span class="o">=</span> <span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_regularizer_l1</span><span class="p">,</span>
+                                            <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_regularizer_l2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_activity_regularizer</span> <span class="o">=</span> <span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">activity_regularizer_l1</span><span class="p">,</span>
+                                                <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">activity_regularizer_l2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_recurrent_regularizer</span> <span class="o">=</span> <span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_regularizer_l1</span><span class="p">,</span>
+                                                 <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_regularizer_l2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_beta_regularizer</span> <span class="o">=</span> <span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_regularizer_l1</span><span class="p">,</span>
+                                            <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_regularizer_l2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gamma_regularizer</span> <span class="o">=</span> <span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_regularizer_l1</span><span class="p">,</span>
+                                             <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma_regularizer_l2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_filters</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_kernel_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_filters</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_kernel_size</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution_strides</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution_strides</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution_kernel_size</span><span class="p">]</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution_dilation_rate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution_dilation_rate</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolution_kernel_size</span><span class="p">]</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pooling_pool_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pooling_pool_size</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_filters</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pooling_strides</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pooling_strides</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_filters</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">cf</span><span class="p">,</span> <span class="n">cks</span><span class="p">,</span> <span class="n">cs</span><span class="p">,</span> <span class="n">cdr</span><span class="p">,</span> <span class="n">pps</span><span class="p">,</span> <span class="n">ps</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_filters</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">convolution_kernel_size</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">convolution_strides</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">convolution_dilation_rate</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">pooling_pool_size</span><span class="p">,</span>
+                                                                    <span class="bp">self</span><span class="o">.</span><span class="n">pooling_strides</span><span class="p">)):</span>
+                    <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convolve_and_pool</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">cf</span><span class="p">,</span> <span class="n">cks</span><span class="p">,</span> <span class="n">cs</span><span class="p">,</span> <span class="n">cdr</span><span class="p">,</span> <span class="n">pps</span><span class="p">,</span> <span class="n">ps</span><span class="p">,</span>
+                                                <span class="n">return_tensors</span><span class="o">=</span><span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convolution_filters</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                                                <span class="n">return_sequences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">recurrent_units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ru</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_units</span><span class="p">):</span>
+                <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recur</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">ru</span><span class="p">,</span>
+                                <span class="n">return_sequences</span><span class="o">=</span><span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recurrent_units</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dense_units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout_noise_shape</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout_noise_shape</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_units</span><span class="p">)</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">du</span><span class="p">,</span> <span class="n">dns</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dense_units</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout_noise_shape</span><span class="p">):</span>
+                <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">du</span><span class="p">,</span> <span class="n">dropout_noise_shape</span><span class="o">=</span><span class="n">dns</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">z</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, David Diaz Vico.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

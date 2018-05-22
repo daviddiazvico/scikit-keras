@@ -1,0 +1,609 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>skkeras.base &#8212; scikit-keras 0.1.8 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for skkeras.base</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Scikit-learn-compatible Keras models.</span>
+
+<span class="sd">@author: David Diaz Vico</span>
+<span class="sd">@license: MIT</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partialmethod</span>
+<span class="kn">from</span> <span class="nn">keras</span> <span class="k">import</span> <span class="n">backend</span> <span class="k">as</span> <span class="n">K</span>
+<span class="kn">from</span> <span class="nn">keras.callbacks</span> <span class="k">import</span> <span class="n">EarlyStopping</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">Dense</span><span class="p">,</span> <span class="n">Input</span><span class="p">,</span> <span class="n">TimeDistributed</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">load_model</span><span class="p">,</span> <span class="n">save_model</span>
+<span class="kn">from</span> <span class="nn">keras.optimizers</span> <span class="k">import</span> <span class="p">(</span><span class="n">Adadelta</span><span class="p">,</span> <span class="n">Adagrad</span><span class="p">,</span> <span class="n">Adam</span><span class="p">,</span> <span class="n">Adamax</span><span class="p">,</span> <span class="n">Nadam</span><span class="p">,</span> <span class="n">RMSprop</span><span class="p">,</span>
+                              <span class="n">SGD</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">keras.regularizers</span> <span class="k">import</span> <span class="n">l1</span> <span class="k">as</span> <span class="n">l1_</span><span class="p">,</span> <span class="n">l2</span> <span class="k">as</span> <span class="n">l2_</span><span class="p">,</span> <span class="n">l1_l2</span> <span class="k">as</span> <span class="n">l1_l2_</span>
+<span class="kn">from</span> <span class="nn">keras.utils</span> <span class="k">import</span> <span class="n">to_categorical</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sklearn.base</span> <span class="k">import</span> <span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">,</span>
+                          <span class="n">TransformerMixin</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="k">import</span> <span class="n">accuracy_score</span><span class="p">,</span> <span class="n">r2_score</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils.validation</span> <span class="k">import</span> <span class="n">check_array</span><span class="p">,</span> <span class="n">check_is_fitted</span><span class="p">,</span> <span class="n">check_X_y</span>
+<span class="kn">from</span> <span class="nn">tempfile</span> <span class="k">import</span> <span class="n">NamedTemporaryFile</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Keras Model serialization</span>
+<span class="c1">#  http://zachmoshe.com/2017/04/03/pickling-keras-models.html</span>
+<span class="c1">###############################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.hdf5&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handler</span><span class="p">:</span>
+        <span class="n">save_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handler</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;model_str&#39;</span><span class="p">:</span> <span class="n">handler</span><span class="o">.</span><span class="n">read</span><span class="p">()}</span>
+
+
+<span class="n">Model</span><span class="o">.</span><span class="n">__getstate__</span> <span class="o">=</span> <span class="n">__getstate__</span>
+
+
+<span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.hdf5&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handler</span><span class="p">:</span>
+        <span class="n">handler</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;model_str&#39;</span><span class="p">])</span>
+        <span class="n">handler</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="n">handler</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="vm">__dict__</span>
+
+
+<span class="n">Model</span><span class="o">.</span><span class="n">__setstate__</span> <span class="o">=</span> <span class="n">__setstate__</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Optimizer</span>
+<span class="c1">###############################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">_optimizer</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">nesterov</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+               <span class="n">decay</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-08</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="mf">0.999</span><span class="p">,</span>
+               <span class="n">schedule_decay</span><span class="o">=</span><span class="mf">0.004</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Optimizer generator.</span>
+
+<span class="sd">    This function generates the selected optimizer.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    optimizer: {&quot;sgd&quot;, &quot;rmsprop&quot;, &quot;adagrad&quot;, &quot;adadelta&quot;, &quot;adam&quot;, &quot;adamax&quot;,</span>
+<span class="sd">               &quot;nadam&quot;}, default=&#39;adam&#39;</span>
+<span class="sd">               Optimizer</span>
+<span class="sd">    lr: float&gt;=0, default=0.001</span>
+<span class="sd">        Learning rate.</span>
+<span class="sd">    momentum: float&gt;=0, default=0.0</span>
+<span class="sd">              Parameter updates momentum.</span>
+<span class="sd">    nesterov: boolean, default=False</span>
+<span class="sd">              Whether to apply Nesterov momentum.</span>
+<span class="sd">    decay: float&gt;=0, default=0.0</span>
+<span class="sd">           Learning rate decay over each update.</span>
+<span class="sd">    rho: float&gt;=0, default=0.9</span>
+<span class="sd">    epsilon: float&gt;=0, default=1e-08</span>
+<span class="sd">             Fuzz factor.</span>
+<span class="sd">    beta_1: float in (0, 1), default=0.9</span>
+<span class="sd">    beta_2: float in (0, 1), default=0.999</span>
+<span class="sd">    schedule_decay: , default=0.004</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Optimizer</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">optimizers</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;sgd&#39;</span><span class="p">:</span> <span class="n">SGD</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="n">momentum</span><span class="p">,</span> <span class="n">decay</span><span class="o">=</span><span class="n">decay</span><span class="p">,</span>
+                             <span class="n">nesterov</span><span class="o">=</span><span class="n">nesterov</span><span class="p">),</span>
+                  <span class="s1">&#39;rmsprop&#39;</span><span class="p">:</span> <span class="n">RMSprop</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span>
+                                     <span class="n">decay</span><span class="o">=</span><span class="n">decay</span><span class="p">),</span>
+                  <span class="s1">&#39;adagrad&#39;</span><span class="p">:</span> <span class="n">Adagrad</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span> <span class="n">decay</span><span class="o">=</span><span class="n">decay</span><span class="p">),</span>
+                  <span class="s1">&#39;adadelta&#39;</span><span class="p">:</span> <span class="n">Adadelta</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="n">rho</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span>
+                                       <span class="n">decay</span><span class="o">=</span><span class="n">decay</span><span class="p">),</span>
+                  <span class="s1">&#39;adam&#39;</span><span class="p">:</span> <span class="n">Adam</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="n">beta_1</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="n">beta_2</span><span class="p">,</span>
+                               <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span> <span class="n">decay</span><span class="o">=</span><span class="n">decay</span><span class="p">),</span>
+                  <span class="s1">&#39;adamax&#39;</span><span class="p">:</span> <span class="n">Adamax</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="n">beta_1</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="n">beta_2</span><span class="p">,</span>
+                                   <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span> <span class="n">decay</span><span class="o">=</span><span class="n">decay</span><span class="p">),</span>
+                  <span class="s1">&#39;nadam&#39;</span><span class="p">:</span> <span class="n">Nadam</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="n">beta_1</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="n">beta_2</span><span class="p">,</span>
+                                 <span class="n">epsilon</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span>
+                                 <span class="n">schedule_decay</span><span class="o">=</span><span class="n">schedule_decay</span><span class="p">)}</span>
+    <span class="k">return</span> <span class="n">optimizers</span><span class="p">[</span><span class="n">optimizer</span><span class="p">]</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Time-series formatting</span>
+<span class="c1">###############################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">_time_series</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Time series transformation.</span>
+
+<span class="sd">    Transform X, y tensors to time series tensors.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    X: numpy array of shape [n_samples, n_features]</span>
+<span class="sd">       Training set.</span>
+<span class="sd">    y: numpy array of shape [n_samples]</span>
+<span class="sd">       Target values.</span>
+<span class="sd">    window: integer, default=None</span>
+<span class="sd">            Time window length.</span>
+<span class="sd">    return_sequences: boolean, default=False</span>
+<span class="sd">                      Whether to return the last output in the output sequence,</span>
+<span class="sd">                      or the full sequence.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Time series tensors.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">window</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">window</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">window</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">window</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">window</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span> <span class="k">if</span> <span class="n">return_sequences</span> <span class="k">else</span> <span class="n">y</span><span class="p">[</span><span class="n">window</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Regularization</span>
+<span class="c1">###############################################################################</span>
+
+
+<div class="viewcode-block" id="regularize"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.regularize">[docs]</a><span class="k">def</span> <span class="nf">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">l2</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Regularizer.</span>
+
+<span class="sd">    Returns a regularizer.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    l1: float, default=None</span>
+<span class="sd">        L1 regularization factor.</span>
+<span class="sd">    l2: float, default=None</span>
+<span class="sd">        L2 regularization factor.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Regularizer.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">regularizer</span> <span class="o">=</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">True</span><span class="p">:</span> <span class="n">l2_</span><span class="p">(</span><span class="n">l</span><span class="o">=</span><span class="n">l2</span><span class="p">)},</span>
+                   <span class="kc">True</span><span class="p">:</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="n">l1_</span><span class="p">(</span><span class="n">l</span><span class="o">=</span><span class="n">l1</span><span class="p">),</span> <span class="kc">True</span><span class="p">:</span> <span class="n">l1_l2_</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="o">=</span><span class="n">l2</span><span class="p">)}}</span>
+    <span class="k">return</span> <span class="n">regularizer</span><span class="p">[</span><span class="n">l1</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">][</span><span class="n">l2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span></div>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Base feed-forward class</span>
+<span class="c1">###############################################################################</span>
+
+
+<div class="viewcode-block" id="BaseFeedForward"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.BaseFeedForward">[docs]</a><span class="k">class</span> <span class="nc">BaseFeedForward</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;Feed-forward regressor/classifier.</span>
+
+<span class="sd">    This model optimizes the MSE/categorical-crossentropy function using</span>
+<span class="sd">    back-propagation.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    architecture: keras function, default=None</span>
+<span class="sd">                  Feature transformation.</span>
+<span class="sd">    activation: string/function, default=&#39;linear&#39;/&#39;softmax&#39;</span>
+<span class="sd">                Activation function to use.</span>
+<span class="sd">    use_bias: boolean, default=True</span>
+<span class="sd">              Whether the layer uses a bias vector.</span>
+<span class="sd">    kernel_initializer: string/function, default=&#39;glorot_uniform&#39;</span>
+<span class="sd">                        Initializer for the kernel weights matrix.</span>
+<span class="sd">    bias_initializer: string/function, default=&#39;zeros&#39;</span>
+<span class="sd">                      Initializer for the bias vector.</span>
+<span class="sd">    kernel_regularizer_l1: float, default=None</span>
+<span class="sd">                           L1 regularization factor applied to the kernel</span>
+<span class="sd">                           weights matrix.</span>
+<span class="sd">    kernel_regularizer_l2: float, default=None</span>
+<span class="sd">                           L2 regularization factor applied to the kernel</span>
+<span class="sd">                           weights matrix.</span>
+<span class="sd">    bias_regularizer_l1: float, default=None</span>
+<span class="sd">                         L1 regularization factor applied to the bias vector.</span>
+<span class="sd">    bias_regularizer_l2: float, default=None</span>
+<span class="sd">                         L2 regularization factor applied to the bias vector.</span>
+<span class="sd">    activity_regularizer_l1: float, default=None</span>
+<span class="sd">                             L1 regularization factor applied to the output of</span>
+<span class="sd">                             the layer.</span>
+<span class="sd">    activity_regularizer_l2: float, default=None</span>
+<span class="sd">                             L2 regularization factor applied to the output of</span>
+<span class="sd">                             the layer.</span>
+<span class="sd">    kernel_constraint: function, default=None</span>
+<span class="sd">                       Constraint function applied to the kernel weights matrix.</span>
+<span class="sd">    bias_constraint: function, default=None</span>
+<span class="sd">                     Constraint function applied to the bias vector.</span>
+<span class="sd">    optimizer: {&quot;sgd&quot;, &quot;rmsprop&quot;, &quot;adagrad&quot;, &quot;adadelta&quot;, &quot;adam&quot;, &quot;adamax&quot;,</span>
+<span class="sd">               &quot;nadam&quot;}, default=&#39;adam&#39;</span>
+<span class="sd">               Optimizer</span>
+<span class="sd">    lr: float&gt;=0, default=0.001</span>
+<span class="sd">        Learning rate.</span>
+<span class="sd">    momentum: float&gt;=0, default=0.0</span>
+<span class="sd">              Parameter updates momentum.</span>
+<span class="sd">    nesterov: boolean, default=False</span>
+<span class="sd">              Whether to apply Nesterov momentum.</span>
+<span class="sd">    decay: float&gt;=0, default=0.0</span>
+<span class="sd">           Learning rate decay over each update.</span>
+<span class="sd">    rho: float&gt;=0, default=0.9</span>
+<span class="sd">    epsilon: float&gt;=0, default=1e-08</span>
+<span class="sd">             Fuzz factor.</span>
+<span class="sd">    beta_1: float in (0, 1), default=0.9</span>
+<span class="sd">    beta_2: float in (0, 1), default=0.999</span>
+<span class="sd">    schedule_decay: , default=0.004</span>
+<span class="sd">    loss: string/function, default=&#39;mse&#39;/&#39;categorical_crossentropy&#39;</span>
+<span class="sd">          Loss function.</span>
+<span class="sd">    metrics: list, default=None</span>
+<span class="sd">             List of metrics to be evaluated by the model during training and</span>
+<span class="sd">             testing.</span>
+<span class="sd">    loss_weights: list or dictionary, default=None</span>
+<span class="sd">                  Scalar coefficients to weight the loss contributions of</span>
+<span class="sd">                  different model outputs.</span>
+<span class="sd">    sample_weight_mode: {&quot;temporal&quot;, None}, default=None</span>
+<span class="sd">                        Timestep-wise sample weighting.</span>
+<span class="sd">    batch_size: integer, default=&#39;auto&#39;</span>
+<span class="sd">                Number of samples per gradient update.</span>
+<span class="sd">    epochs: integer, default=200</span>
+<span class="sd">            The number of times to iterate over the training data arrays.</span>
+<span class="sd">    verbose: {0, 1, 2}, default=2</span>
+<span class="sd">             Verbosity mode. 0=silent, 1=verbose, 2=one log line per epoch.</span>
+<span class="sd">    early_stopping: bool, default True</span>
+<span class="sd">                    Whether to use early stopping to terminate training when</span>
+<span class="sd">                    validation score is not improving.</span>
+<span class="sd">    tol: float, default 1e-4</span>
+<span class="sd">         Tolerance for the optimization.</span>
+<span class="sd">    patience: integer, default 2</span>
+<span class="sd">              Number of epochs with no improvement after which training will</span>
+<span class="sd">              be stopped.</span>
+<span class="sd">    validation_split: float in [0, 1], default=0.1</span>
+<span class="sd">                      Fraction of the training data to be used as validation</span>
+<span class="sd">                      data.</span>
+<span class="sd">    validation_data: array-like, shape ((n_samples, features_shape),</span>
+<span class="sd">                                        (n_samples, targets_shape)),</span>
+<span class="sd">                     default=None</span>
+<span class="sd">                     Data on which to evaluate the loss and any model metrics at</span>
+<span class="sd">                     the end of each epoch.</span>
+<span class="sd">    shuffle: boolean, default=True</span>
+<span class="sd">             Whether to shuffle the training data before each epoch.</span>
+<span class="sd">    class_weight: dictionary, default=None</span>
+<span class="sd">                  class indices to weights to apply to the model&#39;s loss for the</span>
+<span class="sd">                  samples from each class during training.</span>
+<span class="sd">    sample_weight: array-like, shape (n_samples), default=None</span>
+<span class="sd">                   Weights to apply to the model&#39;s loss for each sample.</span>
+<span class="sd">    initial_epoch: integer, default=0</span>
+<span class="sd">                   Epoch at which to start training.</span>
+<span class="sd">    window: integer, default=None</span>
+<span class="sd">            Time window length.</span>
+<span class="sd">    return_sequences: boolean, default=False</span>
+<span class="sd">                      Whether to return the last output in the output sequence,</span>
+<span class="sd">                      or the full sequence.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">architecture</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">use_bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">kernel_initializer</span><span class="o">=</span><span class="s1">&#39;glorot_uniform&#39;</span><span class="p">,</span> <span class="n">bias_initializer</span><span class="o">=</span><span class="s1">&#39;zeros&#39;</span><span class="p">,</span>
+                 <span class="n">kernel_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kernel_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">bias_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bias_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">activity_regularizer_l1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">activity_regularizer_l2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">kernel_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bias_constraint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;adam&#39;</span><span class="p">,</span>
+                 <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">nesterov</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">decay</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+                 <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-08</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="mf">0.999</span><span class="p">,</span> <span class="n">schedule_decay</span><span class="o">=</span><span class="mf">0.004</span><span class="p">,</span>
+                 <span class="n">loss</span><span class="o">=</span><span class="s1">&#39;mse&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loss_weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">sample_weight_mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+                 <span class="n">verbose</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">early_stopping</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                 <span class="n">validation_split</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">validation_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">class_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">initial_epoch</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">window</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_sequences</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;self&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+<div class="viewcode-block" id="BaseFeedForward.fit"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.BaseFeedForward.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">momentum</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nesterov</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">decay</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">beta_2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">schedule_decay</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loss_weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">sample_weight_mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">early_stopping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">validation_split</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">validation_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">class_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">initial_epoch</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit to data.</span>
+
+<span class="sd">        Fit model to X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X: numpy array of shape [n_samples, n_features]</span>
+<span class="sd">           Training set.</span>
+<span class="sd">        y: numpy array of shape [n_samples]</span>
+<span class="sd">           Target values.</span>
+<span class="sd">        optimizer: {&quot;sgd&quot;, &quot;rmsprop&quot;, &quot;adagrad&quot;, &quot;adadelta&quot;, &quot;adam&quot;, &quot;adamax&quot;,</span>
+<span class="sd">                   &quot;nadam&quot;}, default=&#39;adam&#39;</span>
+<span class="sd">                   Optimizer</span>
+<span class="sd">        lr: float&gt;=0, default=0.001</span>
+<span class="sd">            Learning rate.</span>
+<span class="sd">        momentum: float&gt;=0, default=0.0</span>
+<span class="sd">                  Parameter updates momentum.</span>
+<span class="sd">        nesterov: boolean, default=False</span>
+<span class="sd">                  Whether to apply Nesterov momentum.</span>
+<span class="sd">        decay: float&gt;=0, default=0.0</span>
+<span class="sd">               Learning rate decay over each update.</span>
+<span class="sd">        rho: float&gt;=0, default=0.9</span>
+<span class="sd">        epsilon: float&gt;=0, default=1e-08</span>
+<span class="sd">                 Fuzz factor.</span>
+<span class="sd">        beta_1: float in (0, 1), default=0.9</span>
+<span class="sd">        beta_2: float in (0, 1), default=0.999</span>
+<span class="sd">        schedule_decay: , default=0.004</span>
+<span class="sd">        loss: string/function, default=&#39;mse&#39;/&#39;categorical_crossentropy&#39;</span>
+<span class="sd">              Loss function.</span>
+<span class="sd">        metrics: list, default=None</span>
+<span class="sd">                 List of metrics to be evaluated by the model during training</span>
+<span class="sd">                 and testing.</span>
+<span class="sd">        loss_weights: list or dictionary, default=None</span>
+<span class="sd">                      Scalar coefficients to weight the loss contributions of</span>
+<span class="sd">                      different model outputs.</span>
+<span class="sd">        sample_weight_mode: {&quot;temporal&quot;, None}, default=None</span>
+<span class="sd">                            Timestep-wise sample weighting.</span>
+<span class="sd">        batch_size: integer, default=&#39;auto&#39;</span>
+<span class="sd">                    Number of samples per gradient update.</span>
+<span class="sd">        epochs: integer, default=200</span>
+<span class="sd">                The number of times to iterate over the training data arrays.</span>
+<span class="sd">        verbose: {0, 1, 2}, default=1</span>
+<span class="sd">                 Verbosity mode. 0=silent, 1=verbose, 2=one log line per epoch.</span>
+<span class="sd">        early_stopping: bool, default True</span>
+<span class="sd">                        Whether to use early stopping to terminate training</span>
+<span class="sd">                        when validation score is not improving.</span>
+<span class="sd">        tol: float, default 1e-4</span>
+<span class="sd">             Tolerance for the optimization.</span>
+<span class="sd">        patience: integer, default 2</span>
+<span class="sd">                  Number of epochs with no improvement after which training will</span>
+<span class="sd">                  be stopped.</span>
+<span class="sd">        validation_split: float in [0, 1], default=0.1</span>
+<span class="sd">                          Fraction of the training data to be used as validation</span>
+<span class="sd">                          data.</span>
+<span class="sd">        validation_data: array-like, shape ((n_samples, features_shape),</span>
+<span class="sd">                                            (n_samples, targets_shape)),</span>
+<span class="sd">                         default=None</span>
+<span class="sd">                         Data on which to evaluate the loss and any model</span>
+<span class="sd">                         metrics at the end of each epoch.</span>
+<span class="sd">        shuffle: boolean, default=True</span>
+<span class="sd">                 Whether to shuffle the training data before each epoch.</span>
+<span class="sd">        class_weight: dictionary, default=None</span>
+<span class="sd">                      class indices to weights to apply to the model&#39;s loss for</span>
+<span class="sd">                      the samples from each class during training.</span>
+<span class="sd">        sample_weight: array-like, shape (n_samples), default=None</span>
+<span class="sd">                       Weights to apply to the model&#39;s loss for each sample.</span>
+<span class="sd">        initial_epoch: integer, default=0</span>
+<span class="sd">                       Epoch at which to start training.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        self</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;self&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">allow_nd</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">multi_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">_time_series</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span>
+                            <span class="n">return_sequences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">return_sequences</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">inputs</span> <span class="o">=</span> <span class="n">Input</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">architecture</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">architecture</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])),</span> <span class="n">activation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">,</span>
+                      <span class="n">use_bias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">use_bias</span><span class="p">,</span>
+                      <span class="n">kernel_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_initializer</span><span class="p">,</span>
+                      <span class="n">bias_initializer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_initializer</span><span class="p">,</span>
+                      <span class="n">kernel_regularizer</span><span class="o">=</span><span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_regularizer_l1</span><span class="p">,</span>
+                                                    <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_regularizer_l2</span><span class="p">),</span>
+                      <span class="n">bias_regularizer</span><span class="o">=</span><span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_regularizer_l1</span><span class="p">,</span>
+                                                  <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_regularizer_l2</span><span class="p">),</span>
+                      <span class="n">activity_regularizer</span><span class="o">=</span><span class="n">regularize</span><span class="p">(</span><span class="n">l1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">activity_regularizer_l1</span><span class="p">,</span>
+                                                      <span class="n">l2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">activity_regularizer_l2</span><span class="p">),</span>
+                      <span class="n">kernel_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel_constraint</span><span class="p">,</span>
+                      <span class="n">bias_constraint</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bias_constraint</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">return_sequences</span><span class="p">:</span> <span class="n">layer</span> <span class="o">=</span> <span class="n">TimeDistributed</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">_optimizer</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span>
+                               <span class="n">momentum</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">momentum</span><span class="p">,</span> <span class="n">nesterov</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nesterov</span><span class="p">,</span>
+                               <span class="n">decay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">decay</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
+                               <span class="n">epsilon</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">,</span> <span class="n">beta_1</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_1</span><span class="p">,</span>
+                               <span class="n">beta_2</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">beta_2</span><span class="p">,</span>
+                               <span class="n">schedule_decay</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">schedule_decay</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span><span class="p">,</span> <span class="n">metrics</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span>
+                            <span class="n">loss_weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">loss_weights</span><span class="p">,</span>
+                            <span class="n">sample_weight_mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_weight_mode</span><span class="p">)</span>
+        <span class="n">monitor</span> <span class="o">=</span> <span class="s1">&#39;val_loss&#39;</span> <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_split</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;loss&#39;</span>
+        <span class="n">callbacks</span> <span class="o">=</span> <span class="p">[</span><span class="n">EarlyStopping</span><span class="p">(</span><span class="n">monitor</span><span class="o">=</span><span class="n">monitor</span><span class="p">,</span>
+                                   <span class="n">min_delta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">patience</span><span class="p">)]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">early_stopping</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">==</span> <span class="s1">&#39;auto&#39;</span><span class="p">:</span> <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_weight</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span> <span class="n">sample_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_weight</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">history_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                                        <span class="n">epochs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">epochs</span><span class="p">,</span>
+                                        <span class="n">verbose</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span>
+                                        <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span><span class="p">,</span>
+                                        <span class="n">validation_split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_split</span><span class="p">,</span>
+                                        <span class="n">validation_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_data</span><span class="p">,</span>
+                                        <span class="n">shuffle</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span><span class="p">,</span>
+                                        <span class="n">class_weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">class_weight</span><span class="p">,</span>
+                                        <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span>
+                                        <span class="n">initial_epoch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_epoch</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="BaseFeedForward.predict"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.BaseFeedForward.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict using the trained model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X: array-like, shape (n_samples, features_shape)</span>
+<span class="sd">           The input data.</span>
+<span class="sd">        batch_size: integer, default=32</span>
+<span class="sd">                    Batch size.</span>
+<span class="sd">        verbose: {0, 1}, default=0</span>
+<span class="sd">                 Verbosity mode.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_pred: array-like, shape (n_samples, targets_shape)</span>
+<span class="sd">                Target predictions for X.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;model_&#39;</span><span class="p">,</span> <span class="s1">&#39;history_&#39;</span><span class="p">])</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">allow_nd</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_time_series</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span>
+                            <span class="n">return_sequences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">return_sequences</span><span class="p">)</span>
+        <span class="n">preds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">preds</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">preds</span><span class="p">)))</span> <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">preds</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">preds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="k">else</span> <span class="n">preds</span></div>
+
+<div class="viewcode-block" id="BaseFeedForward.transform"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.BaseFeedForward.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transform using the trained model.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X: array-like, shape (n_samples, features_shape)</span>
+<span class="sd">           The input data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Z: array-like, shape (n_samples, last_hidden_layer_shape)</span>
+<span class="sd">           Transformations for X.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;model_&#39;</span><span class="p">,</span> <span class="s1">&#39;history_&#39;</span><span class="p">])</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">check_array</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">allow_nd</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_time_series</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span>
+                            <span class="n">return_sequences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">return_sequences</span><span class="p">)</span>
+        <span class="n">propagate</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">function</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">model_</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input</span><span class="p">],</span>
+                               <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model_</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">output</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">propagate</span><span class="p">([</span><span class="n">X</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="BaseFeedForward.score"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.BaseFeedForward.score">[docs]</a>    <span class="k">def</span> <span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="n">r2_score</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the score of the model on the data X.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X: array-like, shape (n_samples, features_shape)</span>
+<span class="sd">           Test samples.</span>
+<span class="sd">        y: array-like, shape (n_samples, targets_shape)</span>
+<span class="sd">           Targets for X.</span>
+<span class="sd">        sample_weight: array-like, shape [n_samples], default=None</span>
+<span class="sd">                       Sample weights.</span>
+<span class="sd">        metric: function, default=r2_score/accuracy_score</span>
+<span class="sd">                Metric to be evaluated.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        score: float</span>
+<span class="sd">               r2_score/accuracy of self.predict(X) wrt. y.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_is_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;model_&#39;</span><span class="p">,</span> <span class="s1">&#39;history_&#39;</span><span class="p">])</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">check_X_y</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">allow_nd</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">multi_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">_time_series</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span>
+                            <span class="n">return_sequences</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">return_sequences</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">metric</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">)</span></div></div>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Classifier class</span>
+<span class="c1">###############################################################################</span>
+
+
+<div class="viewcode-block" id="FFClassifier"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.FFClassifier">[docs]</a><span class="k">class</span> <span class="nc">FFClassifier</span><span class="p">(</span><span class="n">BaseFeedForward</span><span class="p">,</span> <span class="n">ClassifierMixin</span><span class="p">):</span>
+
+    <span class="vm">__doc__</span> <span class="o">=</span> <span class="n">BaseFeedForward</span><span class="o">.</span><span class="vm">__doc__</span>
+
+    <span class="fm">__init__</span> <span class="o">=</span> <span class="n">partialmethod</span><span class="p">(</span><span class="n">BaseFeedForward</span><span class="o">.</span><span class="fm">__init__</span><span class="p">,</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;softmax&#39;</span><span class="p">,</span>
+                             <span class="n">loss</span><span class="o">=</span><span class="s1">&#39;categorical_crossentropy&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FFClassifier.fit"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.FFClassifier.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">sample_weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_classes_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">BaseFeedForward</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">to_categorical</span><span class="p">(</span><span class="n">y</span><span class="p">),</span>
+                                   <span class="n">sample_weight</span><span class="o">=</span><span class="n">sample_weight</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+    <span class="n">fit</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">BaseFeedForward</span><span class="o">.</span><span class="n">fit</span><span class="o">.</span><span class="vm">__doc__</span>
+
+    <span class="n">predict_proba</span> <span class="o">=</span> <span class="n">BaseFeedForward</span><span class="o">.</span><span class="n">predict</span>
+
+<div class="viewcode-block" id="FFClassifier.predict"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.FFClassifier.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">BaseFeedForward</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+    <span class="n">predict</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">BaseFeedForward</span><span class="o">.</span><span class="n">predict</span><span class="o">.</span><span class="vm">__doc__</span>
+
+    <span class="n">score</span> <span class="o">=</span> <span class="n">partialmethod</span><span class="p">(</span><span class="n">BaseFeedForward</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="n">accuracy_score</span><span class="p">)</span></div>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#  Regressor class</span>
+<span class="c1">###############################################################################</span>
+
+
+<div class="viewcode-block" id="FFRegressor"><a class="viewcode-back" href="../../_static/skkeras.html#skkeras.base.FFRegressor">[docs]</a><span class="k">class</span> <span class="nc">FFRegressor</span><span class="p">(</span><span class="n">BaseFeedForward</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+
+    <span class="vm">__doc__</span> <span class="o">=</span> <span class="n">BaseFeedForward</span><span class="o">.</span><span class="vm">__doc__</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, David Diaz Vico.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

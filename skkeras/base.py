@@ -48,60 +48,6 @@ Model.__setstate__ = __setstate__
 
 
 ###############################################################################
-#  Optimizer
-###############################################################################
-
-
-def _optimizer(optimizer='adam', lr=0.001, momentum=0.0, nesterov=False,
-               decay=0.0, rho=0.9, epsilon=1e-08, beta_1=0.9, beta_2=0.999,
-               schedule_decay=0.004):
-    """Optimizer generator.
-
-    This function generates the selected optimizer.
-
-    Parameters
-    ----------
-    optimizer: {"sgd", "rmsprop", "adagrad", "adadelta", "adam", "adamax",
-               "nadam"}, default='adam'
-               Optimizer
-    lr: float>=0, default=0.001
-        Learning rate.
-    momentum: float>=0, default=0.0
-              Parameter updates momentum.
-    nesterov: boolean, default=False
-              Whether to apply Nesterov momentum.
-    decay: float>=0, default=0.0
-           Learning rate decay over each update.
-    rho: float>=0, default=0.9
-    epsilon: float>=0, default=1e-08
-             Fuzz factor.
-    beta_1: float in (0, 1), default=0.9
-    beta_2: float in (0, 1), default=0.999
-    schedule_decay: , default=0.004
-
-    Returns
-    -------
-    Optimizer
-
-    """
-    optimizers = {'sgd': SGD(lr=lr, momentum=momentum, decay=decay,
-                             nesterov=nesterov),
-                  'rmsprop': RMSprop(lr=lr, rho=rho, epsilon=epsilon,
-                                     decay=decay),
-                  'adagrad': Adagrad(lr=lr, epsilon=epsilon, decay=decay),
-                  'adadelta': Adadelta(lr=lr, rho=rho, epsilon=epsilon,
-                                       decay=decay),
-                  'adam': Adam(lr=lr, beta_1=beta_1, beta_2=beta_2,
-                               epsilon=epsilon, decay=decay),
-                  'adamax': Adamax(lr=lr, beta_1=beta_1, beta_2=beta_2,
-                                   epsilon=epsilon, decay=decay),
-                  'nadam': Nadam(lr=lr, beta_1=beta_1, beta_2=beta_2,
-                                 epsilon=epsilon,
-                                 schedule_decay=schedule_decay)}
-    return optimizers[optimizer]
-
-
-###############################################################################
 #  Time-series formatting
 ###############################################################################
 
@@ -136,14 +82,72 @@ def _time_series(X, y=None, window=None, return_sequences=False):
 
 
 ###############################################################################
+#  Optimizer
+###############################################################################
+
+
+class Optimizer():
+
+    """Optimizer.
+
+    Optimizer class.
+
+    Parameters
+    ----------
+    optimizer: {"sgd", "rmsprop", "adagrad", "adadelta", "adam", "adamax",
+               "nadam"}, default='adam'
+               Optimizer
+    lr: float>=0, default=0.001
+        Learning rate.
+    momentum: float>=0, default=0.0
+              Parameter updates momentum.
+    nesterov: boolean, default=False
+              Whether to apply Nesterov momentum.
+    decay: float>=0, default=0.0
+           Learning rate decay over each update.
+    rho: float>=0, default=0.9
+    epsilon: float>=0, default=1e-08
+             Fuzz factor.
+    beta_1: float in (0, 1), default=0.9
+    beta_2: float in (0, 1), default=0.999
+    schedule_decay: , default=0.004
+
+    Returns
+    -------
+    Optimizer
+
+    """
+
+    def __new__(cls, optimizer='adam', lr=0.001, momentum=0.0, nesterov=False,
+                decay=0.0, rho=0.9, epsilon=1e-08, beta_1=0.9, beta_2=0.999,
+                schedule_decay=0.004):
+        optimizers = {'sgd':  SGD(lr=lr, momentum=momentum, decay=decay,
+                                  nesterov=nesterov),
+                      'rmsprop': RMSprop(lr=lr, rho=rho, epsilon=epsilon,
+                                         decay=decay),
+                      'adagrad': Adagrad(lr=lr, epsilon=epsilon, decay=decay),
+                      'adadelta': Adadelta(lr=lr, rho=rho, epsilon=epsilon,
+                                           decay=decay),
+                      'adam': Adam(lr=lr, beta_1=beta_1, beta_2=beta_2,
+                                   epsilon=epsilon, decay=decay),
+                      'adamax': Adamax(lr=lr, beta_1=beta_1, beta_2=beta_2,
+                                       epsilon=epsilon, decay=decay),
+                      'nadam': Nadam(lr=lr, beta_1=beta_1, beta_2=beta_2,
+                                     epsilon=epsilon,
+                                     schedule_decay=schedule_decay)}
+        return optimizers[optimizer]
+
+
+###############################################################################
 #  Regularization
 ###############################################################################
 
 
-def regularize(l1=None, l2=None):
+class Regularizer():
+
     """Regularizer.
 
-    Returns a regularizer.
+    Regularizer class.
 
     Parameters
     ----------
@@ -157,9 +161,17 @@ def regularize(l1=None, l2=None):
     Regularizer.
 
     """
-    regularizer = {False: {False: None, True: l2_(l=l2)},
-                   True: {False: l1_(l=l1), True: l1_l2_(l1=l1, l2=l2)}}
-    return regularizer[l1 is not None][l2 is not None]
+
+    def __new__(cls, l1=None, l2=None):
+        if (l1 is None) and (l2 is not None):
+            regularizer = l2_(l=l2)
+        elif (l1 is not None) and (l2 is None):
+            regularizer = l1_(l=l1)
+        elif (l1 is not None) and (l2 is not None):
+            regularizer = l1_l2_(l1=l1, l2=l2)
+        else:
+            regularizer = None
+        return regularizer
 
 
 ###############################################################################
@@ -382,22 +394,22 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
                       use_bias=self.use_bias,
                       kernel_initializer=self.kernel_initializer,
                       bias_initializer=self.bias_initializer,
-                      kernel_regularizer=regularize(l1=self.kernel_regularizer_l1,
-                                                    l2=self.kernel_regularizer_l2),
-                      bias_regularizer=regularize(l1=self.bias_regularizer_l1,
-                                                  l2=self.bias_regularizer_l2),
-                      activity_regularizer=regularize(l1=self.activity_regularizer_l1,
-                                                      l2=self.activity_regularizer_l2),
+                      kernel_regularizer=Regularizer(l1=self.kernel_regularizer_l1,
+                                                     l2=self.kernel_regularizer_l2),
+                      bias_regularizer=Regularizer(l1=self.bias_regularizer_l1,
+                                                   l2=self.bias_regularizer_l2),
+                      activity_regularizer=Regularizer(l1=self.activity_regularizer_l1,
+                                                       l2=self.activity_regularizer_l2),
                       kernel_constraint=self.kernel_constraint,
                       bias_constraint=self.bias_constraint)
         if self.return_sequences: layer = TimeDistributed(layer)
         output = layer(z)
-        optimizer = _optimizer(optimizer=self.optimizer, lr=self.lr,
-                               momentum=self.momentum, nesterov=self.nesterov,
-                               decay=self.decay, rho=self.rho,
-                               epsilon=self.epsilon, beta_1=self.beta_1,
-                               beta_2=self.beta_2,
-                               schedule_decay=self.schedule_decay)
+        optimizer = Optimizer(optimizer=self.optimizer, lr=self.lr,
+                              momentum=self.momentum, nesterov=self.nesterov,
+                              decay=self.decay, rho=self.rho,
+                              epsilon=self.epsilon, beta_1=self.beta_1,
+                              beta_2=self.beta_2,
+                              schedule_decay=self.schedule_decay)
         self.model_ = Model(inputs, output)
         self.model_.compile(optimizer, self.loss, metrics=self.metrics,
                             loss_weights=self.loss_weights,
@@ -489,7 +501,7 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
         check_is_fitted(self, ['model_', 'history_'])
         X, y = check_X_y(X, y, allow_nd=True, multi_output=True)
         if len(y.shape) == 1: y = y.reshape((len(y), 1))
-        X, y = _time_series(X, y=y, window=self.window,
+        _, y = _time_series(X, y=y, window=self.window,
                             return_sequences=self.return_sequences)
         return metric(y, self.predict(X), sample_weight=sample_weight)
 

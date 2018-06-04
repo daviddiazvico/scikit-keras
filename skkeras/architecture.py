@@ -6,9 +6,10 @@ Scikit-learn-compatible Keras model architectures.
 """
 
 from keras.layers import (AveragePooling1D, AveragePooling2D, AveragePooling3D,
-                          BatchNormalization, Dense, Dropout, Flatten, Input,
-                          Conv1D, Conv2D, Conv3D, GRU, MaxPooling1D,
-                          MaxPooling2D, MaxPooling3D, LSTM, TimeDistributed)
+                          BatchNormalization, Dense, Dropout, Flatten,  Conv1D,
+                          Conv2D, Conv3D, GRU, MaxPooling1D, MaxPooling2D,
+                          MaxPooling3D, LSTM, TimeDistributed)
+from sklearn.base import BaseEstimator
 
 from .base import Regularizer
 
@@ -18,7 +19,7 @@ from .base import Regularizer
 ###############################################################################
 
 
-class Straight:
+class Straight(BaseEstimator):
 
     """Straight feed-forward architecture.
 

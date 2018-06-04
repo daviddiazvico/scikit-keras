@@ -82,6 +82,85 @@ def _time_series(X, y=None, window=None, return_sequences=False):
 
 
 ###############################################################################
+#  Architecture
+###############################################################################
+
+
+class Architecture(BaseEstimator):
+
+    """Architecture.
+
+    Architecture class.
+
+    Parameters
+    ----------
+    transformer: keras function, default=None
+                 Feature transformation.
+    activation: string/function, default='linear'/'softmax'
+                Activation function to use.
+    use_bias: boolean, default=True
+              Whether the layer uses a bias vector.
+    kernel_initializer: string/function, default='glorot_uniform'
+                        Initializer for the kernel weights matrix.
+    bias_initializer: string/function, default='zeros'
+                      Initializer for the bias vector.
+    kernel_regularizer_l1: float, default=None
+                           L1 regularization factor applied to the kernel
+                           weights matrix.
+    kernel_regularizer_l2: float, default=None
+                           L2 regularization factor applied to the kernel
+                           weights matrix.
+    bias_regularizer_l1: float, default=None
+                         L1 regularization factor applied to the bias vector.
+    bias_regularizer_l2: float, default=None
+                         L2 regularization factor applied to the bias vector.
+    activity_regularizer_l1: float, default=None
+                             L1 regularization factor applied to the output of
+                             the layer.
+    activity_regularizer_l2: float, default=None
+                             L2 regularization factor applied to the output of
+                             the layer.
+    kernel_constraint: function, default=None
+                       Constraint function applied to the kernel weights matrix.
+    bias_constraint: function, default=None
+                     Constraint function applied to the bias vector.
+    return_sequences: boolean, default=False
+                      Whether to return the last output in the output sequence,
+                      or the full sequence.
+
+    Returns
+    -------
+    Model
+
+    """
+
+    def __new__(cls, X, y, transformer=None, activation='linear', use_bias=True,
+                kernel_initializer='glorot_uniform', bias_initializer='zeros',
+                kernel_regularizer_l1=None, kernel_regularizer_l2=None,
+                bias_regularizer_l1=None, bias_regularizer_l2=None,
+                activity_regularizer_l1=None, activity_regularizer_l2=None,
+                kernel_constraint=None, bias_constraint=None,
+                return_sequences=False):
+        z = inputs = Input(shape=X.shape[1:])
+        if transformer is not None: z = transformer(z)
+        layer = Dense(int(np.prod(y.shape[1:])), activation=activation,
+                      use_bias=use_bias,
+                      kernel_initializer=kernel_initializer,
+                      bias_initializer=bias_initializer,
+                      kernel_regularizer=Regularizer(l1=kernel_regularizer_l1,
+                                                     l2=kernel_regularizer_l2),
+                      bias_regularizer=Regularizer(l1=bias_regularizer_l1,
+                                                   l2=bias_regularizer_l2),
+                      activity_regularizer=Regularizer(l1=activity_regularizer_l1,
+                                                       l2=activity_regularizer_l2),
+                      kernel_constraint=kernel_constraint,
+                      bias_constraint=bias_constraint)
+        if return_sequences: layer = TimeDistributed(layer)
+        output = layer(z)
+        return Model(inputs, output)
+
+
+###############################################################################
 #  Optimizer
 ###############################################################################
 
@@ -188,8 +267,8 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
 
     Parameters
     ----------
-    architecture: keras function, default=None
-                  Feature transformation.
+    transformer: keras function, default=None
+                 Feature transformation.
     activation: string/function, default='linear'/'softmax'
                 Activation function to use.
     use_bias: boolean, default=True
@@ -284,7 +363,7 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self, architecture=None, activation='linear', use_bias=True,
+    def __init__(self, transformer=None, activation='linear', use_bias=True,
                  kernel_initializer='glorot_uniform', bias_initializer='zeros',
                  kernel_regularizer_l1=None, kernel_regularizer_l2=None,
                  bias_regularizer_l1=None, bias_regularizer_l2=None,
@@ -388,38 +467,33 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
         if len(y.shape) == 1: y = y.reshape((len(y), 1))
         X, y = _time_series(X, y=y, window=self.window,
                             return_sequences=self.return_sequences)
-        z = inputs = Input(shape=X.shape[1:])
-        if self.architecture is not None: z = self.architecture(z)
-        layer = Dense(int(np.prod(y.shape[1:])), activation=self.activation,
-                      use_bias=self.use_bias,
-                      kernel_initializer=self.kernel_initializer,
-                      bias_initializer=self.bias_initializer,
-                      kernel_regularizer=Regularizer(l1=self.kernel_regularizer_l1,
-                                                     l2=self.kernel_regularizer_l2),
-                      bias_regularizer=Regularizer(l1=self.bias_regularizer_l1,
-                                                   l2=self.bias_regularizer_l2),
-                      activity_regularizer=Regularizer(l1=self.activity_regularizer_l1,
-                                                       l2=self.activity_regularizer_l2),
-                      kernel_constraint=self.kernel_constraint,
-                      bias_constraint=self.bias_constraint)
-        if self.return_sequences: layer = TimeDistributed(layer)
-        output = layer(z)
+        self.model_ = Architecture(X, y, transformer=self.transformer,
+                                   activation=self.activation,
+                                   use_bias=self.use_bias,
+                                   kernel_initializer=self.kernel_initializer,
+                                   bias_initializer=self.bias_initializer,
+                                   kernel_regularizer_l1=self.kernel_regularizer_l1,
+                                   kernel_regularizer_l2=self.kernel_regularizer_l2,
+                                   bias_regularizer_l1=self.bias_regularizer_l1,
+                                   bias_regularizer_l2=self.bias_regularizer_l2,
+                                   activity_regularizer_l1=self.activity_regularizer_l1,
+                                   activity_regularizer_l2=self.activity_regularizer_l2,
+                                   kernel_constraint=self.kernel_constraint,
+                                   bias_constraint=self.bias_constraint,
+                                   return_sequences=self.return_sequences)
         optimizer = Optimizer(optimizer=self.optimizer, lr=self.lr,
                               momentum=self.momentum, nesterov=self.nesterov,
                               decay=self.decay, rho=self.rho,
                               epsilon=self.epsilon, beta_1=self.beta_1,
                               beta_2=self.beta_2,
                               schedule_decay=self.schedule_decay)
-        self.model_ = Model(inputs, output)
         self.model_.compile(optimizer, self.loss, metrics=self.metrics,
                             loss_weights=self.loss_weights,
                             sample_weight_mode=self.sample_weight_mode)
-        monitor = 'val_loss' if (self.validation_split > 0.0 or self.validation_data is not None) else 'loss'
-        callbacks = [EarlyStopping(monitor=monitor,
+        callbacks = [EarlyStopping(monitor='val_loss' if (self.validation_split > 0.0 or self.validation_data is not None) else 'loss',
                                    min_delta=self.tol, patience=self.patience)] if self.early_stopping and (self.tol > 0.0) else []
-        if self.batch_size == 'auto': batch_size = min(200, len(X))
-        if type(self.sample_weight) in (list, tuple): sample_weight = np.asarray(self.sample_weight)
-        self.history_ = self.model_.fit(X, y, batch_size=batch_size,
+        self.history_ = self.model_.fit(X, y,
+                                        batch_size=min(200, len(X)) if self.batch_size == 'auto' else self.batch_size,
                                         epochs=self.epochs,
                                         verbose=self.verbose,
                                         callbacks=callbacks,
@@ -427,7 +501,7 @@ class BaseFeedForward(BaseEstimator, TransformerMixin):
                                         validation_data=self.validation_data,
                                         shuffle=self.shuffle,
                                         class_weight=self.class_weight,
-                                        sample_weight=sample_weight,
+                                        sample_weight=np.asarray(self.sample_weight) if type(self.sample_weight) in (list, tuple) else self.sample_weight,
                                         initial_epoch=self.initial_epoch)
         return self
 

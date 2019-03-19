@@ -18,4 +18,4 @@ setup(name='scikit-keras',
                    'Programming Language :: Python :: 3',
                    'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6'],
-      install_requires=['scikit-learn', 'keras'])
+      install_requires=['scikit-learn==0.20.3', 'keras==2.1.6'])

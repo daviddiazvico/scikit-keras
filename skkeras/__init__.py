@@ -5,5 +5,5 @@ Scikit-learn-compatible Keras models.
 @license: MIT
 """
 
-from .architecture import Straight
-from .base import FFClassifier, FFRegressor
+from .scikit_learn import KerasClassifier, KerasRegressor
+from .build_fn import build_fn_classifier, build_fn_regressor

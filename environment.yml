@@ -2,5 +2,5 @@ name: scikit-keras
 channels:
 - defaults
 dependencies:
-- keras=2.1.6
-- scikit-learn=0.20.3
+- keras
+- scikit-learn

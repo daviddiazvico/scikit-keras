@@ -3,12 +3,12 @@ from setuptools import find_packages, setup
 
 setup(name='scikit-keras',
       packages=find_packages(),
-      version='0.1.11',
+      version='0.1.12',
       description='Scikit-learn-compatible Keras models',
       author='David Diaz Vico',
       author_email='david.diaz.vico@outlook.com',
       url='https://github.com/daviddiazvico/scikit-keras',
-      download_url='https://github.com/daviddiazvico/scikit-keras/archive/v0.1.11.tar.gz',
+      download_url='https://github.com/daviddiazvico/scikit-keras/archive/v0.1.12.tar.gz',
       keywords=['scikit-learn', 'keras'],
       classifiers=['Intended Audience :: Science/Research',
                    'Intended Audience :: Developers',
@@ -18,4 +18,4 @@ setup(name='scikit-keras',
                    'Programming Language :: Python :: 3',
                    'Programming Language :: Python :: 3.5',
                    'Programming Language :: Python :: 3.6'],
-      install_requires=['scikit-learn==0.20.3', 'keras==2.1.6'])
+      install_requires=['scikit-learn', 'keras'])

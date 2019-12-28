@@ -348,7 +348,7 @@ def test_transformedtargetregressor():
     """Tests compatibility with Scikit-learn's transformed target regressor."""
     for config in ['MLPRegressor']:
         loader, _, build_fn, _ = CONFIG[config]
-        base_estimator = KerasCRegressor(build_fn, epochs=1)
+        base_estimator = KerasRegressor(build_fn, epochs=1)
         estimator = TransformedTargetRegressor(regressor=base_estimator,
                                                transformer=StandardScaler())
         check(estimator, loader)

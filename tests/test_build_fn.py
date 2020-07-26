@@ -1,7 +1,7 @@
-from keras import backend as K
 import numpy as np
 from sklearn.datasets import load_iris, load_diabetes, load_digits
-# from keras.wrappers.scikit_learn import KerasClassifier, KerasRegressor
+from tensorflow.keras import backend as K
+
 from skkeras.scikit_learn import KerasClassifier, KerasRegressor
 
 from skkeras.build_fn import build_fn_classifier, build_fn_regressor
@@ -141,18 +141,30 @@ def test_regularized():
                                     recurrent_units=[2],
                                     dense_units=[2],
                                     batchnormalization=True,
-                                    kernel_regularizer_l1=l1,
-                                    kernel_regularizer_l2=l2,
-                                    bias_regularizer_l1=l1,
-                                    bias_regularizer_l2=l2,
-                                    activity_regularizer_l1=l1,
-                                    activity_regularizer_l2=l2,
+                                    convolution_kernel_regularizer_l1=l1,
+                                    convolution_kernel_regularizer_l2=l2,
+                                    convolution_bias_regularizer_l1=l1,
+                                    convolution_bias_regularizer_l2=l2,
+                                    convolution_activity_regularizer_l1=l1,
+                                    convolution_activity_regularizer_l2=l2,
+                                    recurrent_kernel_regularizer_l1=l1,
+                                    recurrent_kernel_regularizer_l2=l2,
                                     recurrent_regularizer_l1=l1,
                                     recurrent_regularizer_l2=l2,
+                                    recurrent_bias_regularizer_l1=l1,
+                                    recurrent_bias_regularizer_l2=l2,
+                                    recurrent_activity_regularizer_l1=l1,
+                                    recurrent_activity_regularizer_l2=l2,
                                     beta_regularizer_l1=l1,
                                     beta_regularizer_l2=l2,
                                     gamma_regularizer_l1=l1,
-                                    gamma_regularizer_l2=l2)
+                                    gamma_regularizer_l2=l2,
+                                    dense_kernel_regularizer_l1=l1,
+                                    dense_kernel_regularizer_l2=l2,
+                                    dense_bias_regularizer_l1=l1,
+                                    dense_bias_regularizer_l2=l2,
+                                    dense_activity_regularizer_l1=l1,
+                                    dense_activity_regularizer_l2=l2)
         assert isinstance(estimator, KerasClassifier)
         estimator.fit(data.data, data.target, epochs=1)
         config = estimator.model_.get_config()

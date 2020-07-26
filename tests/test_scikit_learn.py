@@ -1,5 +1,5 @@
 import numpy as np
-import pickle
+#import pickle
 import pytest
 from scipy.stats import randint
 from sklearn.calibration import CalibratedClassifierCV
@@ -10,10 +10,11 @@ from sklearn.ensemble import (AdaBoostClassifier, AdaBoostRegressor,
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from keras import backend as K
-from keras.layers import Activation, Concatenate, Conv2D, Dense, Flatten, Input
-from keras.models import Model, Sequential
-from keras.utils import to_categorical
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import (Activation, Concatenate, Conv2D, Dense,
+                                     Flatten, Input)
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.utils import to_categorical
 
 from skkeras.scikit_learn import BaseWrapper, KerasClassifier, KerasRegressor
 
@@ -38,11 +39,65 @@ def assert_predictor_works(estimator, loader):
     estimator.fit(data.data, data.target)
     preds = estimator.predict(data.data)
     score = estimator.score(data.data, data.target)
-    serialized_estimator = pickle.dumps(estimator)
-    deserialized_estimator = pickle.loads(serialized_estimator)
-    preds = deserialized_estimator.predict(data.data)
-    score = deserialized_estimator.score(data.data, data.target)
+    # TODO: activate when https://github.com/tensorflow/tensorflow/issues/34697 is solved
+#    serialized_estimator = pickle.dumps(estimator)
+#    deserialized_estimator = pickle.loads(serialized_estimator)
+#    preds = deserialized_estimator.predict(data.data)
+#    score = deserialized_estimator.score(data.data, data.target)
     assert True
+
+
+def assert_classification_works(clf):
+    X, y = load_iris(return_X_y=True)
+    num_classes = len(np.unique(y))
+    clf.fit(X, y, sample_weight=np.ones(X.shape[0]), batch_size=batch_size,
+            epochs=epochs)
+    score = clf.score(X, y, batch_size=batch_size)
+    assert np.isscalar(score) and np.isfinite(score)
+    preds = clf.predict(X, batch_size=batch_size)
+    assert preds.shape == (len(X), )
+    for prediction in np.unique(preds):
+        assert prediction in range(num_classes)
+    proba = clf.predict_proba(X, batch_size=batch_size)
+    assert proba.shape == (len(X), num_classes)
+    assert np.allclose(np.sum(proba, axis=1), np.ones(len(X)))
+
+
+def assert_string_classification_works(clf):
+    X, y = load_iris(return_X_y=True)
+    num_classes = len(np.unique(y))
+    string_classes = ['cls{}'.format(x) for x in range(num_classes)]
+    str_y = np.array(string_classes)[y]
+    clf.fit(X, str_y, batch_size=batch_size, epochs=epochs)
+    score = clf.score(X, str_y, batch_size=batch_size)
+    assert np.isscalar(score) and np.isfinite(score)
+    preds = clf.predict(X, batch_size=batch_size)
+    assert preds.shape == (len(X), )
+    for prediction in np.unique(preds):
+        assert prediction in string_classes
+    proba = clf.predict_proba(X, batch_size=batch_size)
+    assert proba.shape == (len(X), num_classes)
+    assert np.allclose(np.sum(proba, axis=1), np.ones(len(X)))
+
+
+def assert_regression_works(reg):
+    X, y = load_boston(return_X_y=True)
+    reg.fit(X, y, batch_size=batch_size, epochs=epochs)
+    score = reg.score(X, y, batch_size=batch_size)
+    assert np.isscalar(score) and np.isfinite(score)
+    preds = reg.predict(X, batch_size=batch_size)
+    assert preds.shape == (len(X), )
+
+
+def build_fn_clf(input_shape, output_shape, hidden_layer_sizes=[]):
+    model = Sequential()
+    for size in hidden_layer_sizes:
+        model.add(Dense(size, activation='relu'))
+    model.add(Dense(np.prod(output_shape, dtype=np.uint8),
+                    activation='softmax'))
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy',
+                  metrics=['accuracy'])
+    return model
 
 
 def assert_classification_works(clf):
@@ -343,13 +398,14 @@ def test_standalone_multi():
     preds = estimator.predict({'features': features, 'class_in': klass})
     score = estimator.score({'features': features, 'class_in': klass},
                             {'onehot': onehot, 'class_out': klass})
-    serialized_estimator = pickle.dumps(estimator)
-    deserialized_estimator = pickle.loads(serialized_estimator)
-    preds = deserialized_estimator.predict({'features': features,
-                                            'class_in': klass})
-    score = deserialized_estimator.score({'features': features,
-                                          'class_in': klass},
-                                         {'onehot': onehot, 'class_out': klass})
+    # TODO: activate when https://github.com/tensorflow/tensorflow/issues/34697 is solved
+#    serialized_estimator = pickle.dumps(estimator)
+#    deserialized_estimator = pickle.loads(serialized_estimator)
+#    preds = deserialized_estimator.predict({'features': features,
+#                                            'class_in': klass})
+#    score = deserialized_estimator.score({'features': features,
+#                                          'class_in': klass},
+#                                         {'onehot': onehot, 'class_out': klass})
 
 
 if __name__ == '__main__':

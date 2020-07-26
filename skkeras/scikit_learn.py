@@ -1,14 +1,15 @@
 """Wrapper for using the Scikit-Learn API with Keras models.
 """
+
 import copy
 import numpy as np
-from keras.utils.np_utils import to_categorical
-from keras.utils.generic_utils import has_arg
-from keras.utils.generic_utils import to_list
-from keras.models import Model, Sequential
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.utils import to_categorical
+from tensorflow.python.keras.utils.generic_utils import has_arg
 import types
+
 
 class BaseWrapper(BaseEstimator):
     """Base class for the Keras scikit-learn wrapper.
@@ -140,6 +141,7 @@ class BaseWrapper(BaseEstimator):
             history : object
                 details about the training history at each epoch.
         """
+    #     x, y = check_X_y(x, y, allow_nd=True)
         if isinstance(x, dict):
             input_shape = {k: v.shape[1:] for k, v in x.items()}
         elif isinstance(x, list) or isinstance(x, tuple):
@@ -205,6 +207,7 @@ class BaseWrapper(BaseEstimator):
             Numpy array(s) of predictions.
         """
         check_is_fitted(self, ['model_'])
+#        x = check_array(x)
         kwargs = self.filter_sk_params(Model.predict, kwargs)
         return self.model_.predict(x, **kwargs)
 
@@ -236,6 +239,7 @@ class BaseWrapper(BaseEstimator):
             the display labels for the scalar outputs.
         """
         check_is_fitted(self, ['model_'])
+##        x, y = check_X_y(x, y, allow_nd=True)
         kwargs = self.filter_sk_params(Model.evaluate, kwargs)
         return self.model_.evaluate(x, y, **kwargs)
 
@@ -322,6 +326,7 @@ class KerasClassifier(BaseWrapper, ClassifierMixin):
                 will return an array of shape `(n_samples, 2)`
                 (instead of `(n_sample, 1)` as in Keras).
         """
+        check_is_fitted(self, ['model_'])
         kwargs = self.filter_sk_params(Sequential.predict_proba, kwargs)
         probs = self.model_.predict(x, **kwargs)
         # check if binary classification
@@ -359,7 +364,8 @@ class KerasClassifier(BaseWrapper, ClassifierMixin):
         if loss_name == 'categorical_crossentropy' and len(y.shape) != 2:
             y = to_categorical(y)
         outputs = self.model_.evaluate(x, y, **kwargs)
-        outputs = to_list(outputs)
+        if not isinstance(outputs, list):
+            return [outputs]
         for name, output in zip(self.model_.metrics_names, outputs):
             if (name == 'acc') or (name == 'accuracy'):
                 return output

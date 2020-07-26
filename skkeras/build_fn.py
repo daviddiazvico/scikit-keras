@@ -2,16 +2,19 @@
 """
 
 from functools import wraps
-from keras import backend as K
-from keras.layers import (AveragePooling1D, AveragePooling2D, AveragePooling3D,
-                          BatchNormalization, Dense, Dropout, Flatten, Input,
-                          Conv1D, Conv2D, Conv3D, GRU, MaxPooling1D,
-                          MaxPooling2D, MaxPooling3D, LSTM, TimeDistributed)
-from keras.models import Model
-from keras.optimizers import (Adadelta, Adagrad, Adam, Adamax, Nadam, RMSprop,
-                              SGD)
-from keras.regularizers import l1 as l1_, l2 as l2_, l1_l2 as l1_l2_
+import inspect
 import numpy as np
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import (AveragePooling1D, AveragePooling2D,
+                                     AveragePooling3D, BatchNormalization,
+                                     Dense, Dropout, Flatten, Input, Conv1D,
+                                     Conv2D, Conv3D, GRU, MaxPooling1D,
+                                     MaxPooling2D, MaxPooling3D, LSTM,
+                                     TimeDistributed)
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import (Adadelta, Adagrad, Adam, Adamax, Nadam,
+                                         RMSprop, SGD)
+from tensorflow.keras.regularizers import l1 as l1_, l2 as l2_, l1_l2 as l1_l2_
 
 from skkeras.scikit_learn import BaseWrapper
 
@@ -305,10 +308,8 @@ class Straight():
                  convolution_kernel_initializer='glorot_uniform',
                  convolution_bias_initializer='zeros',
                  convolution_kernel_regularizer_l1=None,
-                 convolution_kernel_regularizer_l2=None,
-                 convolution_bias_regularizer_l1=None,
-                 convolution_bias_regularizer_l2=None,
-                 convolution_activity_regularizer_l1=None,
+                 convolution_kernel_regularizer_l2=None, convolution_bias_regularizer_l1=None,
+                 convolution_bias_regularizer_l2=None, convolution_activity_regularizer_l1=None,
                  convolution_activity_regularizer_l2=None,
                  convolution_kernel_constraint=None,
                  convolution_bias_constraint=None, pooling_type='max',
@@ -322,10 +323,8 @@ class Straight():
                  recurrent_bias_initializer='zeros',
                  recurrent_unit_forget_bias=True,
                  recurrent_kernel_regularizer_l1=None,
-                 recurrent_kernel_regularizer_l2=None,
-                 recurrent_bias_regularizer_l1=None,
-                 recurrent_bias_regularizer_l2=None,
-                 recurrent_activity_regularizer_l1=None,
+                 recurrent_kernel_regularizer_l2=None, recurrent_bias_regularizer_l1=None,
+                 recurrent_bias_regularizer_l2=None, recurrent_activity_regularizer_l1=None,
                  recurrent_activity_regularizer_l2=None,
                  recurrent_kernel_constraint=None,
                  recurrent_recurrent_constraint=None,
@@ -713,6 +712,18 @@ def build_fn(input_shape, output_shape, activation='linear', use_bias=True,
         Initializer for the kernel weights matrix.
     convolution_bias_initializer: string/function, default='zeros'
         Initializer for the bias vector.
+    convolution_kernel_regularizer_l1: float, default=None
+        L1 regularization factor applied to the kernel weights matrix.
+    convolution_kernel_regularizer_l2: float, default=None
+        L2 regularization factor applied to the kernel weights matrix.
+    convolution_bias_regularizer_l1: float, default=None
+        L1 regularization factor applied to the bias vector.
+    convolution_bias_regularizer_l2: float, default=None
+        L2 regularization factor applied to the bias vector.
+    convolution_activity_regularizer_l1: float, default=None
+        L1 regularization factor applied to the output of the layer.
+    convolution_activity_regularizer_l2: float, default=None
+        L2 regularization factor applied to the output of the layer.
     convolution_kernel_constraint: function, default=None
         Constraint function applied to the kernel matrix.
     convolution_bias_constraint: function, default=None
@@ -743,6 +754,18 @@ def build_fn(input_shape, output_shape, activation='linear', use_bias=True,
         Initializer for the bias vector.
     recurrent_unit_forget_bias: boolean, default=True
         If True, add 1 to the bias of the forget gate at initialization.
+    recurrent_kernel_regularizer_l1: float, default=None
+        L1 regularization factor applied to the kernel weights matrix.
+    recurrent_kernel_regularizer_l2: float, default=None
+        L2 regularization factor applied to the kernel weights matrix.
+    recurrent_bias_regularizer_l1: float, default=None
+        L1 regularization factor applied to the bias vector.
+    recurrent_bias_regularizer_l2: float, default=None
+        L2 regularization factor applied to the bias vector.
+    recurrent_activity_regularizer_l1: float, default=None
+        L1 regularization factor applied to the output of the layer.
+    recurrent_activity_regularizer_l2: float, default=None
+        L2 regularization factor applied to the output of the layer.
     recurrent_kernel_constraint: function, default=None
         Constraint function applied to the kernel weights matrix.
     recurrent_recurrent_constraint: function, default=None
@@ -755,9 +778,6 @@ def build_fn(input_shape, output_shape, activation='linear', use_bias=True,
     recurrent_recurrent_dropout: float in [0, 1], default=0.0
         Fraction of the units to drop for the linear transformation of the
         recurrent state.
-    recurrent_return_sequences: boolean, default=False
-        Whether to return the last output in the output sequence, or the full
-        sequence.
     recurrent_go_backwards: boolean, default=False
         If True, process the input sequence backwards and return the reversed
         sequence.
@@ -815,17 +835,17 @@ def build_fn(input_shape, output_shape, activation='linear', use_bias=True,
         shape of the binary dropout mask that will be multiplied with the input.
     dropout_seed: integer, default=None
         Random seed.
-    kernel_regularizer_l1: float, default=None
+    dense_kernel_regularizer_l1: float, default=None
         L1 regularization factor applied to the kernel weights matrix.
-    kernel_regularizer_l2: float, default=None
+    dense_kernel_regularizer_l2: float, default=None
         L2 regularization factor applied to the kernel weights matrix.
-    bias_regularizer_l1: float, default=None
+    dense_bias_regularizer_l1: float, default=None
         L1 regularization factor applied to the bias vector.
-    bias_regularizer_l2: float, default=None
+    dense_bias_regularizer_l2: float, default=None
         L2 regularization factor applied to the bias vector.
-    activity_regularizer_l1: float, default=None
+    dense_activity_regularizer_l1: float, default=None
         L1 regularization factor applied to the output of the layer.
-    activity_regularizer_l2: float, default=None
+    dense_activity_regularizer_l2: float, default=None
         L2 regularization factor applied to the output of the layer.
     recurrent_regularizer_l1: float, default=None
         L1 regularization factor applied to the recurrent_kernel weights matrix.
@@ -1008,6 +1028,7 @@ def partial_with_signature(f, **fixed_kwargs):
     def wrapper(*args, **kwargs):
         kwargs.update(fixed_kwargs)
         return f(*args, **kwargs)
+    wrapper.__signature__ = inspect.signature(f)
     return wrapper
 
 

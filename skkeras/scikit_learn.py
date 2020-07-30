@@ -372,7 +372,7 @@ class KerasClassifier(BaseWrapper):
         outputs = self.model.evaluate(x, y, **kwargs)
         outputs = to_list(outputs)
         for name, output in zip(self.model.metrics_names, outputs):
-            if name == 'acc':
+            if (name == 'acc') or (name == 'accuracy'):
                 return output
         raise ValueError('The model is not configured to compute accuracy. '
                          'You should pass `metrics=["accuracy"]` to '

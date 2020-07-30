@@ -65,42 +65,42 @@ def test_architecture():
                 'cnnrnn': digits_ts, 'cnnrnnmlp': digits_ts}
     estimators = {'pcp': KerasClassifier(build_fn_classifier),
                   'mlp': KerasClassifier(build_fn_classifier,
-                                         hidden_dense_units=[10]),
+                                         dense_units=[10]),
                   'batchnormalization': KerasClassifier(build_fn_classifier,
-                                                        hidden_batchnormalization=True,
-                                                        hidden_dense_units=[10]),
+                                                        batchnormalization=True,
+                                                        dense_units=[10]),
                   'dropout': KerasClassifier(build_fn_classifier,
-                                             hidden_dense_units=[10],
-                                             hidden_dropout_rate=0.1),
+                                             dense_units=[10],
+                                             dropout_rate=0.1),
                   'cnn': KerasClassifier(build_fn_classifier,
-                                         hidden_convolution_filters=(1,),
-                                         hidden_convolution_kernel_size=[(2, 2)]),
+                                         convolution_filters=(1,),
+                                         convolution_kernel_size=[(2, 2)]),
                   'cnnpool': KerasClassifier(build_fn_classifier,
-                                             hidden_convolution_filters=[1],
-                                             hidden_convolution_kernel_size=[
+                                             convolution_filters=[1],
+                                             convolution_kernel_size=[
                                                  (2, 2)],
-                                             hidden_pooling_pool_size=[(1, 1)]),
+                                             pooling_pool_size=[(1, 1)]),
                   'cnnmlp': KerasClassifier(build_fn_classifier,
-                                            hidden_convolution_filters=[1],
-                                            hidden_convolution_kernel_size=[
+                                            convolution_filters=[1],
+                                            convolution_kernel_size=[
                                                 (2, 2)],
-                                            hidden_dense_units=[10]),
+                                            dense_units=[10]),
                   'rnn': KerasRegressor(build_fn_regressor,
-                                        hidden_recurrent_units=[10]),
+                                        recurrent_units=[10]),
                   'rnnmlp': KerasRegressor(build_fn_regressor,
-                                           hidden_recurrent_units=[10],
-                                           hidden_dense_units=[10]),
+                                           recurrent_units=[10],
+                                           dense_units=[10]),
                   'cnnrnn': KerasClassifier(build_fn_classifier,
-                                            hidden_convolution_filters=[1],
-                                            hidden_convolution_kernel_size=[
+                                            convolution_filters=[1],
+                                            convolution_kernel_size=[
                                                 (2, 2)],
-                                            hidden_recurrent_units=[10]),
+                                            recurrent_units=[10]),
                   'cnnrnnmlp': KerasClassifier(build_fn_classifier,
-                                               hidden_convolution_filters=[1],
-                                               hidden_convolution_kernel_size=[
+                                               convolution_filters=[1],
+                                               convolution_kernel_size=[
                                                    (2, 2)],
-                                               hidden_recurrent_units=[10],
-                                               hidden_dense_units=[10])}
+                                               recurrent_units=[10],
+                                               dense_units=[10])}
     layers = {'pcp': ['InputLayer', 'Dense'],
               'mlp': ['InputLayer', 'Dense', 'Dense'],
               'batchnormalization': ['InputLayer', 'BatchNormalization',
@@ -124,8 +124,6 @@ def test_architecture():
         estimator.fit(data.data, data.target, epochs=1)
         check_architecture(estimator.model, layer_types)
         estimator.predict(data.data)
-        if test != 'pcp':
-            estimator.transform(data.data)
         estimator.score(data.data, data.target)
 
 
@@ -137,24 +135,24 @@ def test_regularized():
     K.set_image_data_format('channels_first')
     for l1, l2 in ((0.1, None), (None, 0.1), (0.1, 0.1)):
         estimator = KerasClassifier(build_fn_classifier,
-                                    hidden_convolution_filters=[1],
-                                    hidden_convolution_kernel_size=[(2, 2)],
-                                    hidden_pooling_pool_size=[(1, 1)],
-                                    hidden_recurrent_units=[2],
-                                    hidden_dense_units=[2],
-                                    hidden_batchnormalization=True,
-                                    hidden_kernel_regularizer_l1=l1,
-                                    hidden_kernel_regularizer_l2=l2,
-                                    hidden_bias_regularizer_l1=l1,
-                                    hidden_bias_regularizer_l2=l2,
-                                    hidden_activity_regularizer_l1=l1,
-                                    hidden_activity_regularizer_l2=l2,
-                                    hidden_recurrent_regularizer_l1=l1,
-                                    hidden_recurrent_regularizer_l2=l2,
-                                    hidden_beta_regularizer_l1=l1,
-                                    hidden_beta_regularizer_l2=l2,
-                                    hidden_gamma_regularizer_l1=l1,
-                                    hidden_gamma_regularizer_l2=l2)
+                                    convolution_filters=[1],
+                                    convolution_kernel_size=[(2, 2)],
+                                    pooling_pool_size=[(1, 1)],
+                                    recurrent_units=[2],
+                                    dense_units=[2],
+                                    batchnormalization=True,
+                                    kernel_regularizer_l1=l1,
+                                    kernel_regularizer_l2=l2,
+                                    bias_regularizer_l1=l1,
+                                    bias_regularizer_l2=l2,
+                                    activity_regularizer_l1=l1,
+                                    activity_regularizer_l2=l2,
+                                    recurrent_regularizer_l1=l1,
+                                    recurrent_regularizer_l2=l2,
+                                    beta_regularizer_l1=l1,
+                                    beta_regularizer_l2=l2,
+                                    gamma_regularizer_l1=l1,
+                                    gamma_regularizer_l2=l2)
         assert isinstance(estimator, KerasClassifier)
         estimator.fit(data.data, data.target, epochs=1)
         config = estimator.model.get_config()

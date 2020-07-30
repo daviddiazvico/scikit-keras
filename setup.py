@@ -19,7 +19,7 @@ setup(name='scikit-keras',
                    'Programming Language :: Python',
                    'Programming Language :: Python :: 3',
                    'Programming Language :: Python :: 3.6'],
-      install_requires=['scikit-learn', 'keras==2.3.1', 'tensorflow==2.0.0'],
+      install_requires=['scikit-learn', 'keras==2.3.1', 'tensorflow==2.0.1'],
       setup_requires=['pytest-runner'],
       tests_require=['coverage', 'pytest', 'pytest-cov'],
       test_suite='tests')

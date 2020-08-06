@@ -122,7 +122,7 @@ def test_architecture():
         estimator = estimators[test]
         layer_types = layers[test]
         estimator.fit(data.data, data.target, epochs=1)
-        check_architecture(estimator.model, layer_types)
+        check_architecture(estimator.model_, layer_types)
         estimator.predict(data.data)
         estimator.score(data.data, data.target)
 
@@ -155,7 +155,7 @@ def test_regularized():
                                     gamma_regularizer_l2=l2)
         assert isinstance(estimator, KerasClassifier)
         estimator.fit(data.data, data.target, epochs=1)
-        config = estimator.model.get_config()
+        config = estimator.model_.get_config()
         assert all(regularizer
                    in config['layers'][1]['config']['layer']['config']
                    for regularizer in ('kernel_regularizer', 'bias_regularizer',

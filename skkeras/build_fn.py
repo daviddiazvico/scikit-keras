@@ -1,11 +1,8 @@
-"""Build functions to be used with the wrapper.
-"""
+"""Build functions to be used with the wrapper."""
 
 from functools import wraps
 import inspect
-import numpy as np
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import (
+from keras.layers import (
     AveragePooling1D,
     AveragePooling2D,
     AveragePooling3D,
@@ -24,23 +21,13 @@ from tensorflow.keras.layers import (
     LSTM,
     TimeDistributed,
 )
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import (
-    Adadelta,
-    Adagrad,
-    Adam,
-    Adamax,
-    Nadam,
-    RMSprop,
-    SGD,
-)
-from tensorflow.keras.regularizers import l1 as l1_, l2 as l2_, l1_l2 as l1_l2_
-
-from skkeras.scikit_learn import BaseWrapper
+from keras.models import Model
+from keras.optimizers import Adadelta, Adagrad, Adam, Adamax, Nadam, RMSprop, SGD
+from keras.regularizers import l1 as l1_, l2 as l2_, l1_l2 as l1_l2_
+import numpy as np
 
 
 class Regularizer:
-
     """Regularizer.
 
     Regularizer class.
@@ -60,9 +47,9 @@ class Regularizer:
 
     def __new__(cls, l1=None, l2=None):
         if (l1 is None) and (l2 is not None):
-            regularizer = l2_(l=l2)
+            regularizer = l2_(l2=l2)
         elif (l1 is not None) and (l2 is None):
-            regularizer = l1_(l=l1)
+            regularizer = l1_(l1=l1)
         elif (l1 is not None) and (l2 is not None):
             regularizer = l1_l2_(l1=l1, l2=l2)
         else:
@@ -71,7 +58,6 @@ class Regularizer:
 
 
 class SingleIO:
-
     """Single input/output architecture.
 
     Single input/output architecture class.
@@ -141,20 +127,14 @@ class SingleIO:
         if hidden is not None:
             z = hidden(z)
         layer = Dense(
-            np.prod(output_shape, dtype=np.int32),
+            int(np.prod(output_shape, dtype=np.int32)),
             activation=activation,
             use_bias=use_bias,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
-            kernel_regularizer=Regularizer(
-                l1=kernel_regularizer_l1, l2=kernel_regularizer_l2
-            ),
-            bias_regularizer=Regularizer(
-                l1=bias_regularizer_l1, l2=bias_regularizer_l2
-            ),
-            activity_regularizer=Regularizer(
-                l1=activity_regularizer_l1, l2=activity_regularizer_l2
-            ),
+            kernel_regularizer=Regularizer(l1=kernel_regularizer_l1, l2=kernel_regularizer_l2),
+            bias_regularizer=Regularizer(l1=bias_regularizer_l1, l2=bias_regularizer_l2),
+            activity_regularizer=Regularizer(l1=activity_regularizer_l1, l2=activity_regularizer_l2),
             kernel_constraint=kernel_constraint,
             bias_constraint=bias_constraint,
         )
@@ -165,7 +145,6 @@ class SingleIO:
 
 
 class Straight:
-
     """Straight feed-forward hidden-layers.
 
     Basic straight feed-forward hidden-layer architecture.
@@ -485,7 +464,7 @@ class Straight:
     def _recur(self, X, units, return_sequences=True):
         recur = {"lstm": LSTM, "gru": GRU}
         layer = recur[self.recurrent_type](
-            units,
+            int(units),
             activation=self.recurrent_activation,
             recurrent_activation=self.recurrent_recurrent_activation,
             use_bias=self.recurrent_use_bias,
@@ -532,7 +511,7 @@ class Straight:
                 layer = TimeDistributed(layer)
             X = layer(X)
         layer = Dense(
-            units,
+            int(units),
             activation=self.dense_activation,
             use_bias=self.dense_use_bias,
             kernel_initializer=self.dense_kernel_initializer,
@@ -584,33 +563,19 @@ class Straight:
         self.dense_kernel_regularizer = Regularizer(
             l1=self.dense_kernel_regularizer_l1, l2=self.dense_kernel_regularizer_l2
         )
-        self.dense_bias_regularizer = Regularizer(
-            l1=self.dense_bias_regularizer_l1, l2=self.dense_bias_regularizer_l2
-        )
+        self.dense_bias_regularizer = Regularizer(l1=self.dense_bias_regularizer_l1, l2=self.dense_bias_regularizer_l2)
         self.dense_activity_regularizer = Regularizer(
             l1=self.dense_activity_regularizer_l1, l2=self.dense_activity_regularizer_l2
         )
-        self._recurrent_regularizer = Regularizer(
-            l1=self.recurrent_regularizer_l1, l2=self.recurrent_regularizer_l2
-        )
-        self._beta_regularizer = Regularizer(
-            l1=self.beta_regularizer_l1, l2=self.beta_regularizer_l2
-        )
-        self._gamma_regularizer = Regularizer(
-            l1=self.gamma_regularizer_l1, l2=self.gamma_regularizer_l2
-        )
-        if (self.convolution_filters is not None) or (
-            self.convolution_kernel_size is not None
-        ):
+        self._recurrent_regularizer = Regularizer(l1=self.recurrent_regularizer_l1, l2=self.recurrent_regularizer_l2)
+        self._beta_regularizer = Regularizer(l1=self.beta_regularizer_l1, l2=self.beta_regularizer_l2)
+        self._gamma_regularizer = Regularizer(l1=self.gamma_regularizer_l1, l2=self.gamma_regularizer_l2)
+        if (self.convolution_filters is not None) or (self.convolution_kernel_size is not None):
             if len(self.convolution_filters) == len(self.convolution_kernel_size):
                 if self.convolution_strides is None:
-                    self.convolution_strides = [
-                        [1] * len(k) for k in self.convolution_kernel_size
-                    ]
+                    self.convolution_strides = [[1] * len(k) for k in self.convolution_kernel_size]
                 if self.convolution_dilation_rate is None:
-                    self.convolution_dilation_rate = [
-                        [1] * len(k) for k in self.convolution_kernel_size
-                    ]
+                    self.convolution_dilation_rate = [[1] * len(k) for k in self.convolution_kernel_size]
                 if self.pooling_pool_size is None:
                     self.pooling_pool_size = [None] * len(self.convolution_filters)
                 if self.pooling_strides is None:
@@ -642,19 +607,17 @@ class Straight:
                     z,
                     ru,
                     #                                return_sequences=i < len(self.recurrent_units) - 1)
-                    return_sequences=self.return_sequences
-                    or (i < len(self.recurrent_units) - 1),
+                    return_sequences=self.return_sequences or (i < len(self.recurrent_units) - 1),
                 )
         if self.dense_units is not None:
             if self.dropout_noise_shape is None:
                 self.dropout_noise_shape = [None] * len(self.dense_units)
-            for (du, dns) in zip(self.dense_units, self.dropout_noise_shape):
+            for du, dns in zip(self.dense_units, self.dropout_noise_shape):
                 z = self._connect(z, du, dropout_noise_shape=dns)
         return z
 
 
 class Optimizer:
-
     """Optimizer.
 
     Optimizer class.
@@ -677,7 +640,6 @@ class Optimizer:
         Fuzz factor.
     beta_1: float in (0, 1), default=0.9
     beta_2: float in (0, 1), default=0.999
-    schedule_decay: , default=0.004
 
     Returns
     -------
@@ -696,7 +658,6 @@ class Optimizer:
         epsilon=1e-08,
         beta_1=0.9,
         beta_2=0.999,
-        schedule_decay=0.004,
     ):
         optimizers = {
             "sgd": SGD(
@@ -705,15 +666,9 @@ class Optimizer:
                 decay=decay,
                 nesterov=nesterov,
             ),
-            "rmsprop": RMSprop(
-                learning_rate=learning_rate, rho=rho, epsilon=epsilon, decay=decay
-            ),
-            "adagrad": Adagrad(
-                learning_rate=learning_rate, epsilon=epsilon, decay=decay
-            ),
-            "adadelta": Adadelta(
-                learning_rate=learning_rate, rho=rho, epsilon=epsilon, decay=decay
-            ),
+            "rmsprop": RMSprop(learning_rate=learning_rate, rho=rho, epsilon=epsilon, decay=decay),
+            "adagrad": Adagrad(learning_rate=learning_rate, epsilon=epsilon, decay=decay),
+            "adadelta": Adadelta(learning_rate=learning_rate, rho=rho, epsilon=epsilon, decay=decay),
             "adam": Adam(
                 learning_rate=learning_rate,
                 beta_1=beta_1,
@@ -733,7 +688,6 @@ class Optimizer:
                 beta_1=beta_1,
                 beta_2=beta_2,
                 epsilon=epsilon,
-                schedule_decay=schedule_decay,
             ),
         }
         return optimizers[optimizer]
@@ -843,11 +797,9 @@ def build_fn(
     epsilon=1e-08,
     beta_1=0.9,
     beta_2=0.999,
-    schedule_decay=0.004,
     loss=None,
     metrics=None,
     loss_weights=None,
-    sample_weight_mode=None,
     batch_size=None,
     epochs=None,
     verbose=None,
@@ -1079,7 +1031,6 @@ def build_fn(
         Fuzz factor.
     beta_1: float in (0, 1), default=0.9
     beta_2: float in (0, 1), default=0.999
-    schedule_decay: , default=0.004
     loss: string/function, default='mse'/'categorical_crossentropy'
         Loss function.
     metrics: list, default=None
@@ -1088,8 +1039,6 @@ def build_fn(
     loss_weights: list or dictionary, default=None
         Scalar coefficients to weight the loss contributions of different model
         outputs.
-    sample_weight_mode: {"temporal", None}, default=None
-        Timestep-wise sample weighting.
     batch_size: integer, default='auto'
         Number of samples per gradient update.
     epochs: integer, default=200
@@ -1235,14 +1184,12 @@ def build_fn(
         epsilon=epsilon,
         beta_1=beta_1,
         beta_2=beta_2,
-        schedule_decay=schedule_decay,
     )
     model.compile(
         optimizer,
         loss,
         metrics=metrics,
         loss_weights=loss_weights,
-        sample_weight_mode=sample_weight_mode,
     )
     return model
 
@@ -1265,6 +1212,4 @@ build_fn_classifier = partial_with_signature(
 )
 
 
-build_fn_regressor = partial_with_signature(
-    build_fn, activation="linear", loss="mean_squared_error"
-)
+build_fn_regressor = partial_with_signature(build_fn, activation="linear", loss="mean_squared_error")

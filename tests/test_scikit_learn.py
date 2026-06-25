@@ -1,34 +1,20 @@
+from keras import backend as K
+from keras.layers import Concatenate, Conv2D, Dense, Flatten, Input
+from keras.models import Model, Sequential
+from keras.utils import to_categorical
 import numpy as np
-
-# import pickle
+import pickle
 import pytest
 from scipy.stats import randint
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.compose import TransformedTargetRegressor
-from sklearn.datasets import load_boston, load_digits, load_iris
-from sklearn.ensemble import (
-    AdaBoostClassifier,
-    AdaBoostRegressor,
-    BaggingClassifier,
-    BaggingRegressor,
-)
+from sklearn.datasets import load_diabetes, load_digits, load_iris
+from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor, BaggingClassifier, BaggingRegressor
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import (
-    Activation,
-    Concatenate,
-    Conv2D,
-    Dense,
-    Flatten,
-    Input,
-)
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.utils import to_categorical
 
 from skkeras.scikit_learn import BaseWrapper, KerasClassifier, KerasRegressor
-
 
 hidden_layer_sizes = [5]
 batch_size = 32
@@ -61,9 +47,7 @@ def assert_predictor_works(estimator, loader):
 def assert_classification_works(clf):
     X, y = load_iris(return_X_y=True)
     num_classes = len(np.unique(y))
-    clf.fit(
-        X, y, sample_weight=np.ones(X.shape[0]), batch_size=batch_size, epochs=epochs
-    )
+    clf.fit(X, y, sample_weight=np.ones(X.shape[0]), batch_size=batch_size, epochs=epochs)
     score = clf.score(X, y, batch_size=batch_size)
     assert np.isscalar(score) and np.isfinite(score)
     preds = clf.predict(X, batch_size=batch_size)
@@ -93,7 +77,7 @@ def assert_string_classification_works(clf):
 
 
 def assert_regression_works(reg):
-    X, y = load_boston(return_X_y=True)
+    X, y = load_diabetes(return_X_y=True)
     reg.fit(X, y, batch_size=batch_size, epochs=epochs)
     score = reg.score(X, y, batch_size=batch_size)
     assert np.isscalar(score) and np.isfinite(score)
@@ -104,20 +88,16 @@ def assert_regression_works(reg):
 def build_fn_clf(input_shape, output_shape, hidden_layer_sizes=[]):
     model = Sequential()
     for size in hidden_layer_sizes:
-        model.add(Dense(size, activation="relu"))
-    model.add(Dense(np.prod(output_shape, dtype=np.uint8), activation="softmax"))
-    model.compile(
-        optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"]
-    )
+        model.add(Dense(int(size), activation="relu"))
+    model.add(Dense(int(np.prod(output_shape, dtype=np.uint8)), activation="softmax"))
+    model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
     return model
 
 
 def assert_classification_works(clf):
     X, y = load_iris(return_X_y=True)
     num_classes = len(np.unique(y))
-    clf.fit(
-        X, y, sample_weight=np.ones(X.shape[0]), batch_size=batch_size, epochs=epochs
-    )
+    clf.fit(X, y, sample_weight=np.ones(X.shape[0]), batch_size=batch_size, epochs=epochs)
     score = clf.score(X, y, batch_size=batch_size)
     assert np.isscalar(score) and np.isfinite(score)
     preds = clf.predict(X, batch_size=batch_size)
@@ -147,7 +127,7 @@ def assert_string_classification_works(clf):
 
 
 def assert_regression_works(reg):
-    X, y = load_boston(return_X_y=True)
+    X, y = load_diabetes(return_X_y=True)
     reg.fit(X, y, batch_size=batch_size, epochs=epochs)
     score = reg.score(X, y, batch_size=batch_size)
     assert np.isscalar(score) and np.isfinite(score)
@@ -158,19 +138,17 @@ def assert_regression_works(reg):
 def build_fn_clf(input_shape, output_shape, hidden_layer_sizes=[]):
     model = Sequential()
     for size in hidden_layer_sizes:
-        model.add(Dense(size, activation="relu"))
-    model.add(Dense(np.prod(output_shape, dtype=np.uint8), activation="softmax"))
-    model.compile(
-        optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"]
-    )
+        model.add(Dense(int(size), activation="relu"))
+    model.add(Dense(int(np.prod(output_shape, dtype=np.uint8)), activation="softmax"))
+    model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
     return model
 
 
 def build_fn_regs(input_shape, output_shape, hidden_layer_sizes=[]):
     model = Sequential()
     for size in hidden_layer_sizes:
-        model.add(Dense(size, activation="relu"))
-    model.add(Dense(np.prod(output_shape, dtype=np.uint8)))
+        model.add(Dense(int(size), activation="relu"))
+    model.add(Dense(int(np.prod(output_shape, dtype=np.uint8))))
     model.compile(optimizer, loss="mean_squared_error")
     return model
 
@@ -178,8 +156,8 @@ def build_fn_regs(input_shape, output_shape, hidden_layer_sizes=[]):
 def build_fn_clss(input_shape, output_shape, hidden_layer_sizes=[]):
     model = Sequential()
     for size in hidden_layer_sizes:
-        model.add(Dense(size, activation="relu"))
-    model.add(Dense(np.prod(output_shape), activation="softmax"))
+        model.add(Dense(int(size), activation="relu"))
+    model.add(Dense(int(np.prod(output_shape)), activation="softmax"))
     model.compile(optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
     return model
 
@@ -189,8 +167,8 @@ def build_fn_clscs(input_shape, output_shape, hidden_layer_sizes=[]):
     model.add(Conv2D(3, (3, 3)))
     model.add(Flatten())
     for size in hidden_layer_sizes:
-        model.add(Dense(size, activation="relu"))
-    model.add(Dense(np.prod(output_shape), activation="softmax"))
+        model.add(Dense(int(size), activation="relu"))
+    model.add(Dense(int(np.prod(output_shape)), activation="softmax"))
     model.compile(optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
     return model
 
@@ -200,8 +178,8 @@ def build_fn_clscf(input_shape, output_shape, hidden_layer_sizes=[]):
     z = Conv2D(3, (3, 3))(X)
     z = Flatten()(z)
     for size in hidden_layer_sizes:
-        z = Dense(size, activation="relu")(z)
-    y = Dense(np.prod(output_shape), activation="softmax")(z)
+        z = Dense(int(size), activation="relu")(z)
+    y = Dense(int(np.prod(output_shape)), activation="softmax")(z)
     model = Model(inputs=X, outputs=y)
     model.compile(optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
     return model
@@ -212,11 +190,9 @@ def build_fn_multi(input_shape, output_shape, hidden_layer_sizes=[]):
     class_in = Input(shape=input_shape["class_in"], name="class_in")
     z = Concatenate()([features, class_in])
     for size in hidden_layer_sizes:
-        z = Dense(size, activation="relu")(z)
-    onehot = Dense(
-        np.prod(output_shape["onehot"]), activation="softmax", name="onehot"
-    )(z)
-    class_out = Dense(np.prod(output_shape["class_out"]), name="class_out")(z)
+        z = Dense(int(size), activation="relu")(z)
+    onehot = Dense(int(np.prod(output_shape["onehot"])), activation="softmax", name="onehot")(z)
+    class_out = Dense(int(np.prod(output_shape["class_out"])), name="class_out")(z)
     model = Model(inputs=[features, class_in], outputs=[onehot, class_out])
     model.compile(
         optimizer,
@@ -229,43 +205,35 @@ def build_fn_multi(input_shape, output_shape, hidden_layer_sizes=[]):
 def build_fn_reg(input_shape, output_shape, hidden_layer_sizes=[]):
     model = Sequential()
     for size in hidden_layer_sizes:
-        model.add(Dense(size, activation="relu"))
-    model.add(Dense(np.prod(output_shape, dtype=np.uint8)))
+        model.add(Dense(int(size), activation="relu"))
+    model.add(Dense(int(np.prod(output_shape, dtype=np.uint8))))
     model.compile(optimizer=optimizer, loss="mean_absolute_error", metrics=["accuracy"])
     return model
 
 
 class ClassBuildFnClf(object):
     def __call__(self, input_shape, output_shape, hidden_layer_sizes=[]):
-        return build_fn_clf(
-            input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes
-        )
+        return build_fn_clf(input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes)
 
 
 class InheritClassBuildFnClf(KerasClassifier):
     def __call__(self, input_shape, output_shape, hidden_layer_sizes=[]):
-        return build_fn_clf(
-            input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes
-        )
+        return build_fn_clf(input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes)
 
 
 class ClassBuildFnReg(object):
     def __call__(self, input_shape, output_shape, hidden_layer_sizes=[]):
-        return build_fn_reg(
-            input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes
-        )
+        return build_fn_reg(input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes)
 
 
 class InheritClassBuildFnReg(KerasRegressor):
     def __call__(self, input_shape, output_shape, hidden_layer_sizes=[]):
-        return build_fn_reg(
-            input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes
-        )
+        return build_fn_reg(input_shape, output_shape, hidden_layer_sizes=hidden_layer_sizes)
 
 
 CONFIG = {
     "MLPRegressor": (
-        load_boston,
+        load_diabetes,
         KerasRegressor,
         build_fn_regs,
         (BaggingRegressor, AdaBoostRegressor),
@@ -362,7 +330,7 @@ def test_regression_inherit_class_build_fn():
 
 def test_regression_predict_shape_correct_num_test(num_test=1):
     """Tests regressor predictions."""
-    X, y = load_boston(return_X_y=True)
+    X, y = load_diabetes(return_X_y=True)
     reg = KerasRegressor(
         build_fn=build_fn_reg,
         hidden_layer_sizes=hidden_layer_sizes,
@@ -397,12 +365,8 @@ def test_searchcv():
     for config in ["MLPRegressor", "MLPClassifier", "CNNClassifier", "CNNClassifierF"]:
         loader, model, build_fn, _ = CONFIG[config]
         estimator = model(build_fn, epochs=1, validation_split=0.1)
-        assert_predictor_works(
-            GridSearchCV(estimator, {"hidden_layer_sizes": [[], [5]]}), loader
-        )
-        assert_predictor_works(
-            RandomizedSearchCV(estimator, {"epochs": randint(1, 5)}, n_iter=2), loader
-        )
+        assert_predictor_works(GridSearchCV(estimator, {"hidden_layer_sizes": [[], [5]]}), loader)
+        assert_predictor_works(RandomizedSearchCV(estimator, {"epochs": randint(1, 5)}, n_iter=2), loader)
 
 
 def test_ensemble():
@@ -411,7 +375,7 @@ def test_ensemble():
         loader, model, build_fn, ensembles = CONFIG[config]
         base_estimator = model(build_fn, epochs=1)
         for ensemble in ensembles:
-            estimator = ensemble(base_estimator=base_estimator, n_estimators=2)
+            estimator = ensemble(estimator=base_estimator, n_estimators=2)
             assert_predictor_works(estimator, loader)
 
 
@@ -420,7 +384,7 @@ def test_calibratedclassifiercv():
     for config in ["MLPClassifier"]:
         loader, _, build_fn, _ = CONFIG[config]
         base_estimator = KerasClassifier(build_fn, epochs=1)
-        estimator = CalibratedClassifierCV(base_estimator=base_estimator)
+        estimator = CalibratedClassifierCV(estimator=base_estimator)
         assert_predictor_works(estimator, loader)
 
 
@@ -429,9 +393,7 @@ def test_transformedtargetregressor():
     for config in ["MLPRegressor"]:
         loader, _, build_fn, _ = CONFIG[config]
         base_estimator = KerasRegressor(build_fn, epochs=1)
-        estimator = TransformedTargetRegressor(
-            regressor=base_estimator, transformer=StandardScaler()
-        )
+        estimator = TransformedTargetRegressor(regressor=base_estimator, transformer=StandardScaler())
         assert_predictor_works(estimator, loader)
 
 
@@ -451,16 +413,12 @@ def test_standalone_multi():
         {"features": features, "class_in": klass},
         {"onehot": onehot, "class_out": klass},
     )
-    # TODO: activate when https://github.com/tensorflow/tensorflow/issues/34697 is solved
-
-
-#    serialized_estimator = pickle.dumps(estimator)
-#    deserialized_estimator = pickle.loads(serialized_estimator)
-#    preds = deserialized_estimator.predict({'features': features,
-#                                            'class_in': klass})
-#    score = deserialized_estimator.score({'features': features,
-#                                          'class_in': klass},
-#                                         {'onehot': onehot, 'class_out': klass})
+    serialized_estimator = pickle.dumps(estimator)
+    deserialized_estimator = pickle.loads(serialized_estimator)
+    preds = deserialized_estimator.predict({"features": features, "class_in": klass})
+    score = deserialized_estimator.score(
+        {"features": features, "class_in": klass}, {"onehot": onehot, "class_out": klass}
+    )
 
 
 if __name__ == "__main__":

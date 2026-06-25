@@ -1,10 +1,9 @@
+from keras import backend as K
 import numpy as np
 from sklearn.datasets import load_iris, load_diabetes, load_digits
-from tensorflow.keras import backend as K
-
-from skkeras.scikit_learn import KerasClassifier, KerasRegressor
 
 from skkeras.build_fn import build_fn_classifier, build_fn_regressor
+from skkeras.scikit_learn import KerasClassifier, KerasRegressor
 
 
 def time_series(X, y=None, window=None, return_sequences=False):
@@ -54,14 +53,10 @@ def test_architecture():
     digits.data = digits.data.reshape([digits.data.shape[0], 8, 8, 1]) / 16.0
     K.set_image_data_format("channels_last")
     diabetes_ts = load_diabetes()
-    diabetes_ts.data, diabetes_ts.target = time_series(
-        diabetes_ts.data, y=diabetes_ts.target, window=3
-    )
+    diabetes_ts.data, diabetes_ts.target = time_series(diabetes_ts.data, y=diabetes_ts.target, window=3)
     digits_ts = load_digits()
     digits_ts.data = digits_ts.data.reshape([digits_ts.data.shape[0], 8, 8, 1]) / 16.0
-    digits_ts.data, digits_ts.target = time_series(
-        digits_ts.data, y=digits_ts.target, window=3
-    )
+    digits_ts.data, digits_ts.target = time_series(digits_ts.data, y=digits_ts.target, window=3)
     datasets = {
         "pcp": load_iris(),
         "mlp": load_iris(),
@@ -78,12 +73,8 @@ def test_architecture():
     estimators = {
         "pcp": KerasClassifier(build_fn_classifier),
         "mlp": KerasClassifier(build_fn_classifier, dense_units=[10]),
-        "batchnormalization": KerasClassifier(
-            build_fn_classifier, batchnormalization=True, dense_units=[10]
-        ),
-        "dropout": KerasClassifier(
-            build_fn_classifier, dense_units=[10], dropout_rate=0.1
-        ),
+        "batchnormalization": KerasClassifier(build_fn_classifier, batchnormalization=True, dense_units=[10]),
+        "dropout": KerasClassifier(build_fn_classifier, dense_units=[10], dropout_rate=0.1),
         "cnn": KerasClassifier(
             build_fn_classifier,
             convolution_filters=(1,),
@@ -102,9 +93,7 @@ def test_architecture():
             dense_units=[10],
         ),
         "rnn": KerasRegressor(build_fn_regressor, recurrent_units=[10]),
-        "rnnmlp": KerasRegressor(
-            build_fn_regressor, recurrent_units=[10], dense_units=[10]
-        ),
+        "rnnmlp": KerasRegressor(build_fn_regressor, recurrent_units=[10], dense_units=[10]),
         "cnnrnn": KerasClassifier(
             build_fn_classifier,
             convolution_filters=[1],
@@ -222,8 +211,7 @@ def ______test_regularized():
             )
         )
         assert all(
-            regularizer in config["layers"][5]["config"]
-            for regularizer in ("beta_regularizer", "gamma_regularizer")
+            regularizer in config["layers"][5]["config"] for regularizer in ("beta_regularizer", "gamma_regularizer")
         )
         assert all(
             regularizer in config["layers"][6]["config"]
@@ -241,4 +229,3 @@ def ______test_regularized():
                 "activity_regularizer",
             )
         )
-

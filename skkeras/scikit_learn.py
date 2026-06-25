@@ -1,13 +1,12 @@
-"""Wrapper for using the Scikit-Learn API with Keras models.
-"""
+"""Wrapper for using the Scikit-Learn API with Keras models."""
 
 import copy
+from inspect import signature
+from keras.models import Model, Sequential
+from keras.utils import to_categorical
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
-from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.utils import to_categorical
-from tensorflow.python.keras.utils.generic_utils import has_arg
+from sklearn.utils.validation import check_is_fitted
 import types
 
 
@@ -76,15 +75,13 @@ class BaseWrapper(BaseEstimator):
         ]
         if self.build_fn is None:
             legal_params_fns.append(self.__call__)
-        elif not isinstance(self.build_fn, types.FunctionType) and not isinstance(
-            self.build_fn, types.MethodType
-        ):
+        elif not isinstance(self.build_fn, types.FunctionType) and not isinstance(self.build_fn, types.MethodType):
             legal_params_fns.append(self.build_fn.__call__)
         else:
             legal_params_fns.append(self.build_fn)
         for params_name in params:
             for fn in legal_params_fns:
-                if has_arg(fn, params_name):
+                if params_name in signature(fn).parameters:
                     break
             else:
                 if params_name != "nb_epoch":
@@ -146,7 +143,6 @@ class BaseWrapper(BaseEstimator):
             history : object
                 details about the training history at each epoch.
         """
-        #     X, y = check_X_y(X, y, allow_nd=True)
         if isinstance(X, dict):
             input_shape = {k: v.shape[1:] for k, v in X.items()}
         elif isinstance(X, list) or isinstance(X, tuple):
@@ -160,21 +156,11 @@ class BaseWrapper(BaseEstimator):
         else:
             output_shape = y.shape[1:]
         if self.build_fn is None:
-            self.model_ = self.__call__(
-                input_shape, output_shape, **self.filter_sk_params(self.__call__)
-            )
-        elif not isinstance(self.build_fn, types.FunctionType) and not isinstance(
-            self.build_fn, types.MethodType
-        ):
-            self.model_ = self.build_fn(
-                input_shape,
-                output_shape,
-                **self.filter_sk_params(self.build_fn.__call__)
-            )
+            self.model_ = self.__call__(input_shape, output_shape, **self.filter_sk_params(self.__call__))
+        elif not isinstance(self.build_fn, types.FunctionType) and not isinstance(self.build_fn, types.MethodType):
+            self.model_ = self.build_fn(input_shape, output_shape, **self.filter_sk_params(self.build_fn.__call__))
         else:
-            self.model_ = self.build_fn(
-                input_shape, output_shape, **self.filter_sk_params(self.build_fn)
-            )
+            self.model_ = self.build_fn(input_shape, output_shape, **self.filter_sk_params(self.build_fn))
         fit_args = copy.deepcopy(self.filter_sk_params(Model.fit))
         fit_args.update(kwargs)
         history = self.model_.fit(X, y, **fit_args)
@@ -194,7 +180,7 @@ class BaseWrapper(BaseEstimator):
         override = override or {}
         res = {}
         for name, value in self.sk_params.items():
-            if has_arg(fn, name):
+            if name in signature(fn).parameters:
                 res.update({name: value})
         res.update(override)
         return res
@@ -217,7 +203,6 @@ class BaseWrapper(BaseEstimator):
             Numpy array(s) of predictions.
         """
         check_is_fitted(self, ["model_"])
-        #        X = check_array(X)
         kwargs = self.filter_sk_params(Model.predict, kwargs)
         return self.model_.predict(X, **kwargs)
 
@@ -249,14 +234,12 @@ class BaseWrapper(BaseEstimator):
             the display labels for the scalar outputs.
         """
         check_is_fitted(self, ["model_"])
-        ##        X, y = check_X_y(X, y, allow_nd=True)
         kwargs = self.filter_sk_params(Model.evaluate, kwargs)
         return self.model_.evaluate(X, y, **kwargs)
 
 
-class KerasClassifier(BaseWrapper, ClassifierMixin):
-    """Implementation of the scikit-learn classifier API for Keras.
-    """
+class KerasClassifier(ClassifierMixin, BaseWrapper):
+    """Implementation of the scikit-learn classifier API for Keras."""
 
     _estimator_type = "classifier"
 
@@ -377,18 +360,20 @@ class KerasClassifier(BaseWrapper, ClassifierMixin):
         if not isinstance(outputs, list):
             return [outputs]
         for name, output in zip(self.model_.metrics_names, outputs):
-            if (name == "acc") or (name == "accuracy"):
+            if (name == "acc") or (name == "accuracy") or (name == "loss"):
                 return output
         raise ValueError(
             "The model is not configured to compute accuracy. "
             'You should pass `metrics=["accuracy"]` to '
             "the `model.compile()` method."
+            "----------------------output: {0}: {1}".format(
+                self.model_.metrics_names, outputs
+            )  ##############################
         )
 
 
-class KerasRegressor(BaseWrapper, RegressorMixin):
-    """Implementation of the scikit-learn regressor API for Keras.
-    """
+class KerasRegressor(RegressorMixin, BaseWrapper):
+    """Implementation of the scikit-learn regressor API for Keras."""
 
     _estimator_type = "regressor"
 

@@ -37,7 +37,7 @@ jobs:
       pip install --index-url https://download.pytorch.org/whl/cpu torch
       pip install -e .[test] pytest-azurepipelines
       pytest -v -s \
-        --cov=scikit-keras \
+        --cov=skkeras \
         --cov-branch \
         --cov-report=term-missing \
         --cov-report=xml \

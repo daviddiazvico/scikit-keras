@@ -366,9 +366,6 @@ class KerasClassifier(ClassifierMixin, BaseWrapper):
             "The model is not configured to compute accuracy. "
             'You should pass `metrics=["accuracy"]` to '
             "the `model.compile()` method."
-            "----------------------output: {0}: {1}".format(
-                self.model_.metrics_names, outputs
-            )  ##############################
         )
 
 

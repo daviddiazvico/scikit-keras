@@ -373,7 +373,7 @@ def test_ensemble():
     """Tests compatibility with Scikit-learn's ensembles."""
     for config in ["MLPRegressor", "MLPClassifier"]:
         loader, model, build_fn, ensembles = CONFIG[config]
-        base_estimator = model(build_fn, epochs=1)
+        base_estimator = model(build_fn, hidden_layer_sizes=[20, 10], epochs=50)
         for ensemble in ensembles:
             estimator = ensemble(estimator=base_estimator, n_estimators=2)
             assert_predictor_works(estimator, loader)

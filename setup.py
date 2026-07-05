@@ -9,10 +9,16 @@ setup(
     description="Scikit-learn-compatible Keras models",
     author="David Diaz Vico",
     author_email="david.diaz.vico@outlook.com",
+    license="MIT",
     url="https://github.com/daviddiazvico/scikit-keras",
-    download_url="https://github.com/daviddiazvico/scikit-keras/archive/v0.4.0.tar.gz",
+    project_urls={
+        "Documentation": "https://daviddiazvico.github.io/scikit-keras/",
+        "Source": "https://github.com/daviddiazvico/scikit-keras",
+        "Tracker": "https://github.com/daviddiazvico/scikit-keras/issues",
+    },
     keywords=["keras", "scikit-learn"],
     classifiers=[
+        "License :: OSI Approved :: MIT License",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering",
@@ -24,6 +30,7 @@ setup(
         "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14",
     ],
-    install_requires=["keras", "scikit-learn"],
-    extras_require={"test": ["coverage", "pytest", "pytest-cov"]},
+    python_requires=">=3.11",
+    install_requires=["keras>=3", "scikit-learn>=1.4"],
+    extras_require={"test": ["coverage", "pytest", "pytest-cov"], "docs": ["sphinx>=8", "pydata-sphinx-theme>=0.16"]},
 )

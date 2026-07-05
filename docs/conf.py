@@ -1,31 +1,12 @@
-import os
-import sys
+from importlib.metadata import metadata
 
-sys.path.insert(0, os.path.abspath(".."))
+meta = metadata("scikit-keras")
 
-project = "scikit-keras"
-author = "David Diaz Vico"
-copyright = "2017, David Diaz Vico"
-
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.viewcode",
-]
-
+project = meta["Name"]
+author = meta["Author-email"] or meta["Author"]
+copyright = f"2017, {author}"
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.autosummary", "sphinx.ext.napoleon", "sphinx.ext.viewcode"]
 autosummary_generate = True
-
-templates_path = []
-
 exclude_patterns = ["_build"]
-
 html_theme = "pydata_sphinx_theme"
-
-html_static_path = []
-
-autodoc_default_options = {
-    "members": True,
-    "undoc-members": False,
-    "show-inheritance": True,
-}
+autodoc_default_options = {"members": True, "show-inheritance": True}

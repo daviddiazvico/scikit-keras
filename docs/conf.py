@@ -18,9 +18,7 @@ autosummary_generate = True
 
 templates_path = []
 
-exclude_patterns = [
-    "_build",
-]
+exclude_patterns = ["_build"]
 
 html_theme = "pydata_sphinx_theme"
 

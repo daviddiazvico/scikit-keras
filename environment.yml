@@ -1,6 +1,0 @@
-name: scikit-keras
-channels:
-- defaults
-dependencies:
-- keras
-- scikit-learn
